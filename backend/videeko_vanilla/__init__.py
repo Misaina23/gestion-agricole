@@ -1,0 +1,1 @@
+# VIDEEKO VANILLA Django Project

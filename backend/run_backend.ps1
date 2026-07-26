@@ -1,0 +1,1 @@
+$ErrorActionPreference='SilentlyContinue'; if (Get-Command python -ErrorAction SilentlyContinue) { python --version } else { Write-Host 'Python introuvable'; exit 1 }; pip install -r requirements.txt; python manage.py migrate --noinput; python manage.py runserver 0.0.0.0:8000
