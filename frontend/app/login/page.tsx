@@ -172,7 +172,7 @@ export default function LoginPage() {
           {/* Demo credentials hint */}
           <div className="mt-6 p-4 rounded-xl bg-white/40 border border-white/60 dark:bg-white/5 dark:border-white/10">
             <p className="text-xs text-[#1e3a5f]/60 text-center dark:text-[#87ceeb]/60">
-              Pour tester, connectez votre backend Django sur le port 8000
+              Le backend Django est déjà déployé en production
             </p>
           </div>
         </div>

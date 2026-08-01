@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = 'http://192.168.1.10:8000/api'
+const DEFAULT_API_URL = 'https://gestion-agricole-1-ajdy.onrender.com/api'
 
 const normalizeApiUrl = (url: string) => url.replace(/\/+$/, '')
 
