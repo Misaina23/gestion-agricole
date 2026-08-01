@@ -24,5 +24,6 @@ mobile/web-build/
 .DS_Store
 Thumbs.db
 *.swp
+*.tsbuildinfo
 .idea/
 .vscode/

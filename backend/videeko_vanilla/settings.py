@@ -26,13 +26,13 @@ DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,0.0.0.0"
+    "localhost,127.0.0.1,0.0.0.0,gestion-agricole-1-ajdy.onrender.com"
 ).split(",")
 
 
 API_URL = os.getenv(
     "API_URL",
-    "http://localhost:8000"
+    "https://gestion-agricole-1-ajdy.onrender.com/api"
 )
 
 
