@@ -1,9 +1,8 @@
 from django.db import migrations
-from django.contrib.auth import get_user_model
 
 
 def create_default_admin(apps, schema_editor):
-    User = get_user_model()
+    User = apps.get_model('accounts', 'User')
     if not User.objects.filter(username='andrianisaina23@gmail.com').exists():
         user = User.objects.create_user(
             username='andrianisaina23@gmail.com',

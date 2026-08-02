@@ -18,14 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
+            'id', 'code', 'username', 'email', 'first_name', 'last_name',
             'full_name', 'role', 'role_display', 'platform', 'platform_display',
             'registration_status', 'registration_status_display',
             'phone', 'region', 'commune', 'avatar', 'is_field_agent',
             'is_supervisor', 'is_active', 'last_sync', 'last_login',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'last_login', 'created_at', 'updated_at', 'last_sync']
+        read_only_fields = ['id', 'code', 'last_login', 'created_at', 'updated_at', 'last_sync']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

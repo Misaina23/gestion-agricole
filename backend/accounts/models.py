@@ -1,6 +1,8 @@
 """
 Custom User Model for VIDEEKO VANILLA
 """
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -78,6 +80,13 @@ class User(AbstractUser):
         default=False,
         verbose_name='Superviseur'
     )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name='Code utilisateur'
+    )
     last_sync = models.DateTimeField(
         blank=True,
         null=True,
@@ -97,3 +106,14 @@ class User(AbstractUser):
     @property
     def full_name(self):
         return self.get_full_name() or self.username
+
+    def _generate_unique_code(self):
+        return f"USR-{uuid.uuid4().hex[:8]}"
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            code = self._generate_unique_code()
+            while self.__class__.objects.filter(code=code).exists():
+                code = self._generate_unique_code()
+            self.code = code
+        super().save(*args, **kwargs)
