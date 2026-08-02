@@ -99,14 +99,16 @@ class Command(BaseCommand):
         ], start=1):
             region = region_lookup[region_name]
             commune = Commune.objects.get(name=commune_name, region=region)
-            defaults = {
-                'name': name,
-                'region': region,
-                'district': commune.district,
-                'commune': commune,
-                'phone': f'+261 {100000000 + index}',
-                'status': 'active',
-            }
+            producer, created = Producer.objects.get_or_create(
+                code=code,
+                defaults={
+                    'name': name,
+                    'region': region,
+                    'district': commune.district,
+                    'commune': commune,
+                    'phone': f'+261 {100000000 + index}',
+                    'status': 'active',
+                }
             )
             if created:
                 self.stdout.write(f'  Created producer: {name}')
