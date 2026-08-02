@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { History as HistoryIcon, Search, Filter } from "lucide-react"
+import { History as HistoryIcon, Search, Filter, Trash2, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -19,7 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuditLogs } from "@/lib/hooks"
+import { auditLogsApi } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
+import { useAuth } from "@/lib/auth-context"
+import { confirmDelete, successAlert, errorAlert, baseConfig } from "@/lib/sweetalert"
+import Swal from "sweetalert2"
 
 const ACTION_STYLES: Record<string, string> = {
   CREATE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
@@ -39,18 +44,58 @@ const MODULES = [
 
 export default function HistoryPage() {
   const { t } = useLanguage()
+  const { isSupervisorOrAdmin } = useAuth()
   const [search, setSearch] = useState("")
   const [moduleFilter, setModuleFilter] = useState("all")
   const [actionFilter, setActionFilter] = useState("all")
   const [page, setPage] = useState(1)
+  const [isResetting, setIsResetting] = useState(false)
 
   const params: Record<string, string> = { page_size: "15", page: String(page) }
   if (search) params.search = search
   if (moduleFilter !== "all") params.module = moduleFilter
   if (actionFilter !== "all") params.action = actionFilter
 
-  const { logs, total, isLoading } = useAuditLogs(params)
+  const { logs, total, isLoading, refresh } = useAuditLogs(params)
   const totalPages = Math.max(1, Math.ceil((total || 0) / 15))
+
+  const handleResetHistory = async () => {
+    const { value: password } = await Swal.fire({
+      ...baseConfig(),
+      title: "Confirmer la réinitialisation",
+      text: "Entrez votre mot de passe de connexion pour confirmer cette action irréversible.",
+      icon: "warning",
+      input: "password",
+      inputLabel: "Mot de passe",
+      inputPlaceholder: "Votre mot de passe",
+      showCancelButton: true,
+      confirmButtonText: "Réinitialiser",
+      cancelButtonText: "Annuler",
+      reverseButtons: true,
+      focusCancel: true,
+      inputValidator: (value: string | undefined) => {
+        if (!value || !value.trim()) return "Le mot de passe est requis"
+        return null
+      },
+    })
+
+    if (!password) return
+
+    const ok = await confirmDelete("Tout l'historique sera définitivement supprimé. Cette action est irréversible.")
+    if (!ok) return
+
+    setIsResetting(true)
+    try {
+      await auditLogsApi.resetHistory(password)
+      successAlert("Succès", "L'historique a été réinitialisé avec succès.")
+      refresh()
+      setPage(1)
+    } catch (error: any) {
+      errorAlert("Erreur", error?.message || "Impossible de réinitialiser l'historique.")
+    } finally {
+      setIsResetting(false)
+    }
+  }
 
   const fmtValue = (v: Record<string, any> | null) => {
     if (!v) return "-"
@@ -64,14 +109,27 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
-          <HistoryIcon className="h-6 w-6 text-primary" />
-          {t("history")}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Journal d&apos;activité et traçabilité des actions du système
-        </p>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+            <HistoryIcon className="h-6 w-6 text-primary" />
+            {t("history")}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Journal d&apos;activité et traçabilité des actions du système
+          </p>
+        </div>
+        {isSupervisorOrAdmin && (
+          <Button
+            variant="destructive"
+            onClick={handleResetHistory}
+            disabled={isResetting}
+            className="gap-2"
+          >
+            {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Réinitialiser l'historique
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row">

@@ -11,8 +11,8 @@ import {
   Target,
   Search,
   Filter,
-  Map,
   TrendingUp,
+  Trash2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -47,7 +47,8 @@ export function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [regionFilter, setRegionFilter] = useState<string>("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false)
+  const [isAssigningProducer, setIsAssigningProducer] = useState(false)
   const [isManageProducersOpen, setIsManageProducersOpen] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [assignedProducers, setAssignedProducers] = useState<CampaignProducer[]>([])
@@ -120,10 +121,11 @@ export function CampaignsPage() {
 
   const handleAddCampaign = async () => {
     if (!campaignForm.name.trim() || !campaignForm.culture || !campaignForm.region || !campaignForm.start_date || !campaignForm.end_date) {
+      errorAlert("Champs requis", "Veuillez remplir tous les champs obligatoires.")
       return
     }
 
-    setIsSubmitting(true)
+    setIsCreatingCampaign(true)
     try {
       await campaignsApi.create({
         name: campaignForm.name.trim(),
@@ -135,23 +137,25 @@ export function CampaignsPage() {
         budget: campaignForm.budget ? Number(campaignForm.budget) : undefined,
         status: campaignForm.status as Campaign['status'],
       })
+      successAlert("Campagne créée", "La campagne a été créée avec succès.")
       const res = await campaignsApi.list()
       setCampaigns(res.results || [])
       setCampaignForm({
         name: "",
         description: "",
         culture: "",
-        region: "",
+        region: regions[0]?.id?.toString() || "",
         start_date: "",
         end_date: "",
         budget: "",
         status: "active",
       })
       setIsAddDialogOpen(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
+      errorAlert("Erreur", error?.message || "Impossible de créer la campagne.")
     } finally {
-      setIsSubmitting(false)
+      setIsCreatingCampaign(false)
     }
   }
 
@@ -175,6 +179,22 @@ export function CampaignsPage() {
   const totalBudget = campaigns.reduce((acc, c) => acc + (c.budget || 0), 0)
   const totalProducers = campaigns.reduce((acc, c) => acc + (c.producers_count || 0), 0)
 
+  const handleDeleteCampaign = async (campaign: Campaign) => {
+    const ok = await confirmDelete(`La campagne "${campaign.name}" sera définitivement supprimée.`)
+    if (!ok) return
+    setIsCreatingCampaign(true)
+    try {
+      await campaignsApi.delete(campaign.id)
+      successAlert("Campagne supprimée", "La campagne a été supprimée avec succès.")
+      const res = await campaignsApi.list()
+      setCampaigns(res.results || [])
+    } catch (error: any) {
+      errorAlert("Erreur", error?.message || "Impossible de supprimer la campagne.")
+    } finally {
+      setIsCreatingCampaign(false)
+    }
+  }
+
   const handleOpenManageProducers = (campaign: Campaign) => {
     setSelectedCampaign(campaign)
     setSelectedProducerId("")
@@ -190,7 +210,7 @@ export function CampaignsPage() {
       return
     }
 
-    setIsSubmitting(true)
+    setIsAssigningProducer(true)
     try {
       await campaignProducersApi.create({
         campaign: selectedCampaign.id,
@@ -205,14 +225,14 @@ export function CampaignsPage() {
       const msg = error?.message || "Impossible d'assigner le producteur à la campagne."
       errorAlert("Erreur", msg)
     } finally {
-      setIsSubmitting(false)
+      setIsAssigningProducer(false)
     }
   }
 
   const handleRemoveAssignedProducer = async (assignmentId: number) => {
     const ok = await confirmDelete("Le producteur sera retiré de cette campagne.")
     if (!ok) return
-    setIsSubmitting(true)
+    setIsAssigningProducer(true)
     try {
       await campaignProducersApi.delete(assignmentId)
       if (selectedCampaign) {
@@ -224,7 +244,7 @@ export function CampaignsPage() {
       console.error('Failed to remove assigned producer', error)
       errorAlert("Erreur", "Impossible de retirer le producteur de la campagne.")
     } finally {
-      setIsSubmitting(false)
+      setIsAssigningProducer(false)
     }
   }
 
@@ -396,13 +416,23 @@ export function CampaignsPage() {
                       : "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <button
-                      type="button"
-                      className="rounded-xl bg-slate-800 px-3 py-1 text-sm text-white transition-colors hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
-                      onClick={() => handleOpenManageProducers(campaign)}
-                    >
-                      Gérer producteurs
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded-xl bg-slate-800 px-3 py-1 text-sm text-white transition-colors hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
+                        onClick={() => handleOpenManageProducers(campaign)}
+                      >
+                        Gérer producteurs
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl bg-red-600 px-3 py-1 text-sm text-white transition-colors hover:bg-red-700"
+                        onClick={() => handleDeleteCampaign(campaign)}
+                        disabled={isCreatingCampaign}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -537,14 +567,14 @@ export function CampaignsPage() {
               >
                 Annuler
               </button>
-              <button
-                type="button"
-                className="rounded-xl bg-[#1e3a5f] px-4 py-2 text-white hover:bg-[#2d5a87]"
-                onClick={handleAddCampaign}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Enregistrement...' : 'Créer la campagne'}
-              </button>
+               <button
+                 type="button"
+                 className="rounded-xl bg-[#1e3a5f] px-4 py-2 text-white hover:bg-[#2d5a87]"
+                 onClick={handleAddCampaign}
+                 disabled={isCreatingCampaign}
+               >
+                 {isCreatingCampaign ? 'Enregistrement...' : 'Créer la campagne'}
+               </button>
             </div>
           </div>
         </div>
@@ -608,7 +638,7 @@ export function CampaignsPage() {
                   type="button"
                   className="rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
                   onClick={handleAssignProducer}
-                  disabled={!selectedProducerId || isSubmitting}
+                  disabled={!selectedProducerId || isAssigningProducer}
                 >
                   Ajouter
                 </button>
@@ -658,7 +688,7 @@ export function CampaignsPage() {
                         type="button"
                         className="rounded-xl bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
                         onClick={() => handleRemoveAssignedProducer(assignment.id)}
-                        disabled={isSubmitting}
+                        disabled={isAssigningProducer}
                       >
                         Retirer
                       </button>

@@ -242,18 +242,6 @@ export function InputsPage() {
     setIsViewDialogOpen(true)
   }
 
-  const handleExportCsv = async () => {
-    setIsExporting(true)
-    try {
-      await inputsApi.list({ page_size: "1000" })
-      toast.success("Export CSV réussi")
-    } catch {
-      toast.error("Erreur lors de l'export CSV")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const handleExportExcel = async () => {
     setIsExporting(true)
     try {
@@ -308,7 +296,6 @@ export function InputsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting}>CSV</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>Excel</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPdf} disabled={isExporting}>PDF</DropdownMenuItem>
             </DropdownMenuContent>

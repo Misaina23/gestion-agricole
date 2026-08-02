@@ -1,7 +1,8 @@
 ﻿"use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react"
+import Image from "next/image"
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -79,8 +80,16 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md">
         <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#87ceeb] to-[#4a90c2] shadow-lg mb-4">
-              <MapPin className="w-8 h-8 text-[#0a1628]" />
+            <div className="mb-4 flex justify-center">
+              <Image
+                src="/logo.jpg"
+                alt="VIDEEKO VANILLA"
+                width={96}
+                height={96}
+                className="rounded-2xl shadow-lg object-contain"
+                style={{ width: 'auto', height: 'auto' }}
+                priority
+              />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-wide">
               VIDEEKO <span className="text-[#87ceeb]">VANILLA</span>

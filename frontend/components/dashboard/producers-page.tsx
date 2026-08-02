@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   Users,
   Search,
@@ -47,7 +48,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useProducers, invalidateProducers, useRegions, useDistricts, useCommunes } from "@/lib/hooks"
+import { useProducers, invalidateProducers, useRegions, useDistricts, useCommunes, useProducer } from "@/lib/hooks"
 import { producersApi, type Producer } from "@/lib/api"
 import { toast } from "sonner"
 import { useLanguage } from "@/lib/language-context"
@@ -67,7 +68,6 @@ export function ProducersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [selectedProducer, setSelectedProducer] = useState<Producer | null>(null)
@@ -92,6 +92,12 @@ export function ProducersPage() {
     email: "",
     status: "pending",
   })
+
+  const searchParams = useSearchParams()
+  const producerQueryId = searchParams.get('producer')
+  const producerAction = searchParams.get('action')
+  const isQueryProducer = producerQueryId ? Number(producerQueryId) : null
+  const { producer: queryProducer, isLoading: isLoadingQueryProducer } = useProducer(isQueryProducer)
 
   const { regions } = useRegions()
   const selectedRegionId = formData.region ? Number(formData.region) : undefined
@@ -157,13 +163,19 @@ export function ProducersPage() {
 
   const handleEdit = async () => {
     if (!selectedProducer) return
+    if (!formData.name.trim() || !formData.region || !formData.commune) {
+      toast.error("Le nom, la région et la commune sont obligatoires")
+      return
+    }
     setIsSubmitting(true)
     try {
       await producersApi.update(selectedProducer.id, {
         name: formData.name,
         region: formData.region,
+        district: formData.district || undefined,
         commune: formData.commune,
         phone: formData.phone,
+        email: formData.email || undefined,
       })
       toast.success("Producteur modifié avec succès")
       setIsEditDialogOpen(false)
@@ -183,7 +195,6 @@ export function ProducersPage() {
     try {
       await producersApi.delete(selectedProducer.id)
       successAlert("Suppression réussie", "Le producteur a été supprimé.")
-      setIsDeleteDialogOpen(false)
       setSelectedProducer(null)
       invalidateProducers()
       refresh()
@@ -208,6 +219,15 @@ export function ProducersPage() {
     setIsEditDialogOpen(true)
   }
 
+  useEffect(() => {
+    if (producerAction === 'view' && queryProducer) {
+      openViewDialog(queryProducer)
+    }
+    if (producerAction === 'edit' && queryProducer) {
+      openEditDialog(queryProducer)
+    }
+  }, [producerAction, queryProducer])
+
   const openViewDialog = (producer: Producer) => {
     setSelectedProducer(producer)
     setIsViewDialogOpen(true)
@@ -218,18 +238,6 @@ export function ProducersPage() {
     confirmDelete("Le producteur et ses données liées seront définitivement supprimés.").then((ok) => {
       if (ok) handleDelete()
     })
-  }
-
-  const handleExportCsv = async () => {
-    setIsExporting(true)
-    try {
-      await producersApi.exportCsv(params)
-      toast.success("Export CSV réussi")
-    } catch {
-      toast.error("Erreur lors de l'export CSV")
-    } finally {
-      setIsExporting(false)
-    }
   }
 
   const handleExportExcel = async () => {
@@ -286,7 +294,6 @@ export function ProducersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting}>CSV</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>Excel</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPdf} disabled={isExporting}>PDF</DropdownMenuItem>
             </DropdownMenuContent>
@@ -677,41 +684,6 @@ export function ProducersPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="w-5 h-5" />
-              Supprimer le Producteur
-            </DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce producteur ? Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProducer && (
-            <div className="py-4">
-              <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold">
-                  {selectedProducer.name.split(" ").map(n => n[0]).join("")}
-                </div>
-                <div>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.name}</p>
-                  <p className="text-xs text-[#5a7a9a]">{selectedProducer.code}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isSubmitting}>Annuler</Button>
-            <Button onClick={handleDelete} variant="destructive" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Supprimer
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

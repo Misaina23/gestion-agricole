@@ -127,18 +127,6 @@ export function InspectionsPage() {
     setCurrentPage(1)
   }, [searchQuery, inspection_typeFilter, resultFilter])
 
-  const handleExportCsv = async () => {
-    setIsExporting(true)
-    try {
-      await inspectionsApi.exportCsv({ search: searchQuery })
-      toast.success("Export CSV réussi")
-    } catch {
-      toast.error("Erreur lors de l'export CSV")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const handleExportExcel = async () => {
     setIsExporting(true)
     try {
@@ -287,7 +275,6 @@ export function InspectionsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting}>CSV</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>Excel</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPdf} disabled={isExporting}>PDF</DropdownMenuItem>
             </DropdownMenuContent>

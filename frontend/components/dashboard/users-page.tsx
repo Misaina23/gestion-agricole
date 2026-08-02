@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner"
 import { useUsers, useUserStats } from "@/lib/hooks"
 import { usersApi } from "@/lib/api"
+import { confirmDelete, successAlert, errorAlert } from "@/lib/sweetalert"
 
 interface User {
   id: number
@@ -76,7 +77,6 @@ export function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -157,12 +157,11 @@ export function UsersPage() {
     setIsSubmitting(true)
     try {
       await usersApi.delete(selectedUser.id)
-      toast.success("Utilisateur supprime avec succes")
+      successAlert("Suppression réussie", "L'utilisateur a été supprimé avec succès.")
       mutate()
-      setIsDeleteDialogOpen(false)
       setSelectedUser(null)
     } catch {
-      toast.error("Erreur lors de la suppression")
+      errorAlert("Erreur", "Impossible de supprimer l'utilisateur.")
     } finally {
       setIsSubmitting(false)
     }
@@ -189,7 +188,9 @@ export function UsersPage() {
 
   const openDeleteDialog = (user: User) => {
     setSelectedUser(user)
-    setIsDeleteDialogOpen(true)
+    confirmDelete("Cet utilisateur sera définitivement supprimé.").then((ok) => {
+      if (ok) handleDelete()
+    })
   }
 
   if (isLoading) {
@@ -573,27 +574,6 @@ export function UsersPage() {
           <DialogFooter>
             <Button onClick={() => setIsViewDialogOpen(false)} className="bg-[#1e3a5f] hover:bg-[#2d5a87]">
               Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Confirmer la suppression</DialogTitle>
-            <DialogDescription>
-              Etes-vous sur de vouloir supprimer cet utilisateur ? Cette action est irreversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

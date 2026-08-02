@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import nextDynamic from "next/dynamic"
 import { CampaignsPage } from "@/components/dashboard/campaigns-page"
 import { InputsPage } from "@/components/dashboard/inputs-page"
@@ -28,13 +28,26 @@ import { useAuth } from "@/lib/auth-context"
 import { useLanguage } from "@/lib/language-context"
 import { Loader2, Lock } from "lucide-react"
 
+function DashboardLoadingFallback() {
+  const { t } = useLanguage()
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4 rounded-[1.5rem] border border-border/70 bg-card/90 px-8 py-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.4)]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">{t("loading")}</p>
+      </div>
+    </div>
+  )
+}
+
 function DashboardContent() {
-  const [activeTab, setActiveTab] = useState("Tableau de bord")
+  const [activeTab, setActiveTab] = useState("overview")
   const [activeSidebarItem, setActiveSidebarItem] = useState("overview")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { user, isLoading, isAuthenticated, logout, canAccessUsers, canAccessSettings } = useAuth()
   const { t } = useLanguage()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -42,15 +55,31 @@ function DashboardContent() {
     }
   }, [isLoading, isAuthenticated, router])
 
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && tab !== activeSidebarItem) {
+      setActiveSidebarItem(tab)
+      setActiveTab(tab)
+    }
+  }, [searchParams, activeSidebarItem])
+
+  const navigateDashboard = (item: string, extraParams: Record<string, string> = {}) => {
+    setActiveSidebarItem(item)
+    setActiveTab(item)
+    const nextParams = new URLSearchParams(Array.from(searchParams.entries()))
+    nextParams.set('tab', item)
+    Object.entries(extraParams).forEach(([key, value]) => {
+      if (value) {
+        nextParams.set(key, value)
+      } else {
+        nextParams.delete(key)
+      }
+    })
+    router.replace(`/dashboard?${nextParams.toString()}`)
+  }
+
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 rounded-[1.5rem] border border-border/70 bg-card/90 px-8 py-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.4)]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{t("loading")}</p>
-        </div>
-      </div>
-    )
+    return <DashboardLoadingFallback />
   }
 
   if (!isAuthenticated) {
@@ -125,7 +154,7 @@ function DashboardContent() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <ProducersTable />
+                <ProducersTable onNavigate={navigateDashboard} />
                 <SyncStatus />
               </div>
             </div>
@@ -138,15 +167,15 @@ function DashboardContent() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(135,206,235,0.16),transparent_36%),linear-gradient(135deg,var(--background),color-mix(in srgb,var(--background)_85%,var(--accent)_15%))]">
       <Header 
         activeTab={activeTab} 
-        onTabChange={setActiveTab}
+        onTabChange={navigateDashboard}
         user={user}
-        onNavigate={setActiveSidebarItem}
+        onNavigate={(item: string) => navigateDashboard(item)}
       />
 
       <div className="flex">
         <Sidebar
           activeItem={activeSidebarItem}
-          onItemChange={setActiveSidebarItem}
+          onItemChange={(item: string) => navigateDashboard(item)}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           onLogout={logout}
@@ -163,5 +192,9 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return <DashboardContent />
+  return (
+    <Suspense fallback={<DashboardLoadingFallback />}>
+      <DashboardContent />
+    </Suspense>
+  )
 }

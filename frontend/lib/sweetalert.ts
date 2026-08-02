@@ -17,6 +17,8 @@ function baseConfig() {
   }
 }
 
+export { baseConfig }
+
 export const confirmDelete = (message = "Cette action est irréversible.") =>
   Swal.fire({
     ...baseConfig(),

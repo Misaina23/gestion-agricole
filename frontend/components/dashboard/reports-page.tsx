@@ -20,16 +20,11 @@ export default function ReportsPage() {
   })
   const [isExporting, setIsExporting] = useState(false)
 
-  const handleExportAll = async (format: "csv" | "excel" | "pdf") => {
+  const handleExportAll = async (format: "excel" | "pdf") => {
     setIsExporting(true)
     try {
       const params = { ...filters }
-      if (format === "csv") {
-        await producersApi.exportCsv(params)
-        await parcelsApi.exportCsv(params)
-        await productionsApi.exportCsv(params)
-        await inspectionsApi.exportCsv(params)
-      } else if (format === "excel") {
+      if (format === "excel") {
         await producersApi.exportExcel(params)
         await parcelsApi.exportExcel(params)
         await productionsApi.exportExcel(params)
@@ -60,10 +55,6 @@ export default function ReportsPage() {
             <CardTitle>Producteurs</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={() => producersApi.exportCsv()} disabled={isExporting} className="w-full justify-start">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
             <Button onClick={() => producersApi.exportExcel()} disabled={isExporting} className="w-full justify-start">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Export Excel
@@ -80,10 +71,6 @@ export default function ReportsPage() {
             <CardTitle>Parcelles</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={() => parcelsApi.exportCsv()} disabled={isExporting} className="w-full justify-start">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
             <Button onClick={() => parcelsApi.exportExcel()} disabled={isExporting} className="w-full justify-start">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Export Excel
@@ -100,10 +87,6 @@ export default function ReportsPage() {
             <CardTitle>Productions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={() => productionsApi.exportCsv()} disabled={isExporting} className="w-full justify-start">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
             <Button onClick={() => productionsApi.exportExcel()} disabled={isExporting} className="w-full justify-start">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Export Excel
@@ -120,10 +103,6 @@ export default function ReportsPage() {
             <CardTitle>Inspections</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={() => inspectionsApi.exportCsv()} disabled={isExporting} className="w-full justify-start">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
             <Button onClick={() => inspectionsApi.exportExcel()} disabled={isExporting} className="w-full justify-start">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Export Excel

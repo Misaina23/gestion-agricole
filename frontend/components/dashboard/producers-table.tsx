@@ -18,10 +18,17 @@ const statusStyles = {
   alert: { labelKey: "alert", class: "bg-red-100 text-red-700 border-red-200" },
 }
 
-export function ProducersTable() {
+interface ProducersTableProps {
+  onNavigate?: (item: string, params?: Record<string, string>) => void
+}
+
+export function ProducersTable({ onNavigate }: ProducersTableProps) {
   const { stats, isLoading } = useDashboardStats()
   const { t } = useLanguage()
   const producers = stats?.recent_producers ?? []
+  const handleNavigateProducers = () => onNavigate?.('producers')
+  const handleNavigateProducerDetail = (id: number) => onNavigate?.('producers', { producer: id.toString(), action: 'view' })
+  const handleNavigateProducerEdit = (id: number) => onNavigate?.('producers', { producer: id.toString(), action: 'edit' })
   return (
     <div className="panel-surface p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -38,7 +45,7 @@ export function ProducersTable() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5">
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleNavigateProducers}>
           <Plus className="h-4 w-4" />
           {t("add")}
         </Button>
@@ -95,11 +102,11 @@ export function ProducersTable() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNavigateProducerDetail(producer.id)}>
                       <Eye className="mr-2 h-4 w-4" />
                       {t("viewDetails")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNavigateProducerEdit(producer.id)}>
                       <Edit className="mr-2 h-4 w-4" />
                       {t("edit")}
                     </DropdownMenuItem>
@@ -113,7 +120,7 @@ export function ProducersTable() {
         )}
       </div>
 
-      <Button variant="ghost" className="mt-4 w-full text-foreground hover:bg-accent/40">
+      <Button variant="ghost" className="mt-4 w-full text-foreground hover:bg-accent/40" onClick={handleNavigateProducers}>
         {t("viewAllProducers")}
       </Button>
     </div>

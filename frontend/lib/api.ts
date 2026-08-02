@@ -275,11 +275,6 @@ export const producersApi = {
   
   inspections: (id: number) => apiFetch<Inspection[]>(`/producers/${id}/inspections/`),
   
-  exportCsv: async (params?: Record<string, string>) => {
-    const data = await producersApi.list(params)
-    exportToCsv(data.results, 'producteurs')
-  },
-  
   exportExcel: async (_params?: Record<string, string>) => {
     console.warn('Export Excel non disponible dans cette version.')
   },
@@ -358,11 +353,6 @@ export const parcelsApi = {
     }>>(`/parcels/map_data/${query}`)
   },
   
-  exportCsv: async (params?: Record<string, string>) => {
-    const data = await parcelsApi.list(params)
-    exportToCsv(data.results, 'parcelles')
-  },
-  
   exportExcel: async (_params?: Record<string, string>) => {
     console.warn('Export Excel non disponible dans cette version.')
   },
@@ -422,11 +412,6 @@ export const productionsApi = {
   
   stats: () => apiFetch<DashboardStats['productions']>('/productions/stats/'),
   
-  exportCsv: async (params?: Record<string, string>) => {
-    const data = await productionsApi.list(params)
-    exportToCsv(data.results, 'productions')
-  },
-  
   exportExcel: async (_params?: Record<string, string>) => {
     console.warn('Export Excel non disponible dans cette version.')
   },
@@ -461,11 +446,6 @@ export const inspectionsApi = {
     apiFetch<void>(`/inspections/${id}/`, { method: 'DELETE' }),
   
   stats: () => apiFetch<DashboardStats['inspections']>('/inspections/stats/'),
-  
-  exportCsv: async (params?: Record<string, string>) => {
-    const data = await inspectionsApi.list(params)
-    exportToCsv(data.results, 'inspections')
-  },
   
   exportExcel: async (_params?: Record<string, string>) => {
     console.warn('Export Excel non disponible dans cette version.')
@@ -557,8 +537,28 @@ export interface AnomalyPoint {
 }
 export interface AnomaliesResponse {
   generated_at: string
-  points: AnomalyPoint[]
-  summary: {
+  inactive_producers: Array<{ id: number; name: string; region__name?: string | null }>
+  low_yields: Array<{
+    parcel_id: number
+    parcel: string
+    producer: string
+    region?: string | null
+    yield_kg_per_ha: number
+    area_ha: number
+  }>
+  inconsistent_records: Array<{
+    id: number
+    parcel__code: string
+    weight_green: number | null
+    harvest_date: string | null
+  }>
+  counts: {
+    inactive_producers: number
+    low_yields: number
+    inconsistent_records: number
+  }
+  points?: AnomalyPoint[]
+  summary?: {
     low_yields: number
     inactive_producers: number
     inconsistent_records: number
@@ -965,4 +965,10 @@ export const auditLogsApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<ActivityLogEntry>>(`/audit-logs/${query}`)
   },
+
+  resetHistory: (password: string) =>
+    apiFetch<{ message: string; deleted: number }>('/audit-logs/reset_history/', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 }

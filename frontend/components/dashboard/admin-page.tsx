@@ -1,6 +1,8 @@
 "use client"
 
 import { FolderCog, Database, Bell, Shield, Leaf, MapPin, FileBarChart, Repeat } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { infoAlert } from "@/lib/sweetalert"
 
 interface AdminSection {
   icon: any
@@ -10,6 +12,7 @@ interface AdminSection {
 }
 
 export function AdminPage() {
+  const router = useRouter()
   const sections: AdminSection[] = [
     {
       icon: Leaf,
@@ -55,6 +58,14 @@ export function AdminPage() {
     },
   ]
 
+  const handleSectionClick = (section: AdminSection) => {
+    if (section.id === "notifications") {
+      router.push("/dashboard?tab=settings")
+      return
+    }
+    infoAlert("En développement", `La section "${section.title}" sera disponible prochainement.`)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -68,6 +79,7 @@ export function AdminPage() {
           return (
             <button
               key={section.id}
+              onClick={() => handleSectionClick(section)}
               className="bg-white rounded-xl border border-[#e8f4fc] p-5 text-left hover:shadow-md transition-shadow"
             >
               <Icon className="w-8 h-8 text-[#4a90c2] mb-3" />

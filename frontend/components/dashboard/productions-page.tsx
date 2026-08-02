@@ -122,18 +122,6 @@ export function ProductionsPage() {
     setCurrentPage(1)
   }, [searchQuery, qualityFilter, statusFilter])
 
-  const handleExportCsv = async () => {
-    setIsExporting(true)
-    try {
-      await productionsApi.exportCsv({ search: searchQuery })
-      toast.success("Export CSV réussi")
-    } catch {
-      toast.error("Erreur lors de l'export CSV")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const handleExportExcel = async () => {
     setIsExporting(true)
     try {
@@ -272,7 +260,6 @@ export function ProductionsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting}>CSV</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>Excel</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPdf} disabled={isExporting}>PDF</DropdownMenuItem>
             </DropdownMenuContent>

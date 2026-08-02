@@ -23,6 +23,7 @@ export interface User {
   last_login: string | null
   created_at: string
   updated_at: string
+  code: string
 }
 
 interface AuthTokens {
