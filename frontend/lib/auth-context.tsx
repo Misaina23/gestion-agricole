@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { API_BASE_URL, buildApiUrl } from './api-config'
+import { API_BASE_URL, buildApiUrl, getAuthHeaders } from './api-config'
 
 export interface User {
   id: number
