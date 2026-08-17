@@ -189,12 +189,18 @@ export const getAuthToken = async (): Promise<string | null> => {
 
 export const autoSync = async (onSync?: (success: number, failed: number) => void): Promise<void> => {
   const netInfo = await NetInfo.fetch();
-  if (!netInfo.isConnected) return;
+  if (!netInfo.isConnected) {
+    onSync?.(0, 0);
+    return;
+  }
 
   const records = getPendingRecords();
   let token = await AsyncStorage.getItem('user_token');
 
-  if (!token || records.length === 0) return;
+  if (!token || records.length === 0) {
+    onSync?.(0, 0);
+    return;
+  }
 
   let successCount = 0;
   let failCount = 0;
@@ -212,7 +218,6 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
       });
       successCount++;
     } catch (error: any) {
-      // Tentative de refresh une seule fois si le token est expiré (401)
       const isAuthError = /401|non authent|token/i.test(error?.message || '');
       if (isAuthError && !tokenRefreshed) {
         tokenRefreshed = true;

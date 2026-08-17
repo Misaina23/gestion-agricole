@@ -41,8 +41,8 @@ interface ThemeContextType {
 const STORAGE_KEY = 'agri_app_theme_preference';
 
 const lightTheme: Theme = {
-  bg: '#FFFFFF',
-  surface: '#F8FAFC',
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
   text: '#0F172A',
   textMuted: '#64748B',
@@ -56,16 +56,16 @@ const lightTheme: Theme = {
   success: '#16A34A',
   warning: '#D97706',
   error: '#DC2626',
-  accent: '#7C3AED',
-  info: '#2563EB',
+  accent: '#0D9488',
+  info: '#0D9488',
   statusOnline: '#16A34A',
   statusOffline: '#64748B',
   successBg: '#DCFCE7',
   warningBg: '#FEF3C7',
   errorBg: '#FEE2E2',
-  accentBg: '#EDE9FE',
-  infoBg: '#DBEAFE',
-  inputBg: '#F8FAFC',
+  accentBg: '#CCFBF1',
+  infoBg: '#CCFBF1',
+  inputBg: '#F1F5F9',
 };
 
 const darkTheme: Theme = {
@@ -84,15 +84,15 @@ const darkTheme: Theme = {
   success: '#34D399',
   warning: '#FBBF24',
   error: '#F87171',
-  accent: '#A78BFA',
-  info: '#60A5FA',
+  accent: '#2DD4BF',
+  info: '#2DD4BF',
   statusOnline: '#34D399',
   statusOffline: '#94A3B8',
   successBg: '#14532D',
   warningBg: '#78350F',
   errorBg: '#7F1D1D',
-  accentBg: '#312E81',
-  infoBg: '#1E3A8A',
+  accentBg: '#134E4A',
+  infoBg: '#134E4A',
   inputBg: '#1F2937',
 };
 

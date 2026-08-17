@@ -7,6 +7,7 @@ export function useAutoSync() {
   const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [pendingCount, setPendingCount] = useState(0);
+  const [errorShown, setErrorShown] = useState(false);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -30,7 +31,7 @@ export function useAutoSync() {
       await autoSync((success, failed) => {
         if (success > 0) {
           setSyncStatus('success');
-        } else if (failed > 0) {
+        } else if (failed > 0 && records.length > 0) {
           setSyncStatus('error');
         } else {
           setSyncStatus('idle');

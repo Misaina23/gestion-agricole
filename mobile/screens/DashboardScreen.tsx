@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { useTheme } from '../theme/ThemeContext';
@@ -8,7 +8,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initDB, getPendingRecords, markSynced, clearSynced, API_URL, addSyncLog, normalizeApiUrl } from '../lib/db';
 import { request } from '../lib/api-client';
 
-
 interface PendingRecord {
   id?: number;
   type: string;
@@ -16,6 +15,19 @@ interface PendingRecord {
   createdAt: string;
   synced: number;
 }
+
+const ActionCard = ({ icon, title, subtitle, onPress, theme }: any) => (
+  <TouchableOpacity style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]} onPress={onPress} activeOpacity={0.85}>
+    <View style={[styles.actionIcon, { backgroundColor: theme.primaryMuted }]}>
+      <Ionicons name={icon as any} size={22} color={theme.primary} />
+    </View>
+    <View style={styles.actionBody}>
+      <Text style={[styles.actionTitle, { color: theme.text }]}>{title}</Text>
+      <Text style={[styles.actionSub, { color: theme.textMuted }]}>{subtitle}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+  </TouchableOpacity>
+);
 
 export default function DashboardScreen({ navigation }: any) {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -113,7 +125,6 @@ export default function DashboardScreen({ navigation }: any) {
     }
   };
 
-
   const handleLogout = async () => {
     await AsyncStorage.clear();
     navigation.replace('Login');
@@ -128,154 +139,70 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.themeBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+            style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
             onPress={() => navigation.navigate('Settings')}
           >
-            <Ionicons name="settings-outline" size={20} color={theme.primary} />
+            <Ionicons name="settings-outline" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.themeBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+            style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
             onPress={toggleTheme}
           >
-            <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={theme.primary} />
+            <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={[styles.statusBar, { backgroundColor: isOnline ? theme.statusOnline : theme.statusOffline }]}>
-        <Ionicons name={isOnline ? 'cloud-done' : 'cloud-offline'} size={16} color="#fff" />
-        <Text style={styles.statusText}>{isOnline ? 'Connecté' : 'Mode hors ligne'}</Text>
+      <View style={[styles.statusPill, { backgroundColor: isOnline ? theme.successBg : theme.errorBg }]}>
+        <View style={[styles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
+        <Text style={[styles.statusText, { color: isOnline ? theme.success : theme.error }]}>
+          {isOnline ? 'Connecté' : 'Mode hors ligne'}
+        </Text>
       </View>
 
-      <View style={styles.cardsRow}>
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
-          <View style={[styles.cardIconWrap, { backgroundColor: theme.warningBg }]}>
-            <Ionicons name="time-outline" size={24} color={theme.warning} />
-          </View>
-          <Text style={[styles.cardNumber, { color: theme.text }]}>{pendingCount}</Text>
-          <Text style={[styles.cardLabel, { color: theme.textMuted }]}>En attente</Text>
+      <View style={styles.statsRow}>
+        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
+          <Text style={[styles.statNumber, { color: theme.text }]}>{pendingCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.textMuted }]}>En attente</Text>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
-          <View style={[styles.cardIconWrap, { backgroundColor: theme.successBg }]}>
-            <Ionicons name="checkmark-done-outline" size={24} color={theme.success} />
-          </View>
-          <Text style={[styles.cardNumber, { color: theme.text }]}>{syncedCount}</Text>
-          <Text style={[styles.cardLabel, { color: theme.textMuted }]}>Synchronisées</Text>
+        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
+          <Text style={[styles.statNumber, { color: theme.text }]}>{syncedCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.textMuted }]}>Synchronisées</Text>
         </View>
       </View>
 
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Actions rapides</Text>
+      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Actions rapides</Text>
+
+      <View style={styles.actionsGrid}>
+        <ActionCard icon="add-circle-outline" title="Nouvelle Collecte" subtitle="Saisir les données producteur" onPress={() => navigation.navigate('Collecte')} theme={theme} />
+        <ActionCard icon="clipboard-outline" title="Nouvelle Inspection" subtitle="Évaluer la conformité" onPress={() => navigation.navigate('Inspection')} theme={theme} />
+        <ActionCard icon="qr-code-outline" title="Scanner QR" subtitle="Producteurs / Parcelles" onPress={() => navigation.navigate('QRScanner')} theme={theme} />
+        <ActionCard icon="id-card-outline" title="Scanner CIN" subtitle="Lecture automatique" onPress={() => navigation.navigate('CINScan')} theme={theme} />
+        <ActionCard icon="people-outline" title="Producteurs" subtitle="Rechercher et pré-remplir" onPress={() => navigation.navigate('ProducersList')} theme={theme} />
+        <ActionCard icon="camera-outline" title="Photos" subtitle="Galerie ou appareil photo" onPress={() => navigation.navigate('PhotoUpload', { type: 'parcel' })} theme={theme} />
+        <ActionCard icon="time-outline" title="Historique" subtitle="Voir l'historique" onPress={() => navigation.navigate('Historique')} theme={theme} />
+      </View>
 
       <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.primary }]}
-        onPress={() => navigation.navigate('Collecte')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="add-circle-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Nouvelle Collecte</Text>
-            <Text style={styles.actionSub}>Saisir les données producteur</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.accent }]}
-        onPress={() => navigation.navigate('Inspection')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="clipboard-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Nouvelle Inspection</Text>
-            <Text style={styles.actionSub}>Évaluer la conformité</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.info }]}
-        onPress={() => navigation.navigate('QRScanner')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="qr-code-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Scanner QR Code</Text>
-            <Text style={styles.actionSub}>Producteurs / Parcelles</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.primary }]}
-        onPress={() => navigation.navigate('CINScan')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="id-card-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Scanner la CIN</Text>
-            <Text style={styles.actionSub}>Lecture automatique CIN malgache</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.accent }]}
-        onPress={() => navigation.navigate('ProducersList')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="people-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Liste producteurs</Text>
-            <Text style={styles.actionSub}>Rechercher et pré-remplir</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.actionCard, { backgroundColor: theme.success }]}
-        onPress={() => navigation.navigate('PhotoUpload', { type: 'parcel' })}
-        activeOpacity={0.85}
-      >
-        <View style={styles.actionLeft}>
-          <Ionicons name="camera-outline" size={28} color="#fff" />
-          <View>
-            <Text style={styles.actionTitle}>Ajouter des photos</Text>
-            <Text style={styles.actionSub}>Galerie ou appareil photo</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.syncCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+        style={[styles.syncButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
         onPress={syncData}
         disabled={syncing}
         activeOpacity={0.85}
       >
-        <Ionicons name="sync-outline" size={24} color={theme.primary} />
-          <Text style={[styles.syncText, { color: theme.primary }]}> 
+        <Ionicons name={syncing ? 'sync-outline' : 'sync'} size={22} color={theme.primary} />
+        <Text style={[styles.syncLabel, { color: theme.primary }]}>
           {syncing ? 'Synchronisation...' : 'Synchroniser les données'}
         </Text>
         {pendingCount > 0 && (
-          <View style={[styles.pendingBadge, { backgroundColor: theme.warning }]}>
-            <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+          <View style={[styles.badge, { backgroundColor: theme.primary }]}>
+            <Text style={styles.badgeText}>{pendingCount}</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={18} color={theme.error} />
-        <Text style={[styles.logoutText, { color: theme.error }]}>Déconnexion</Text>
+        <Text style={[styles.logoutLabel, { color: theme.error }]}>Déconnexion</Text>
       </TouchableOpacity>
 
       <View style={{ height: 30 }} />
@@ -289,48 +216,46 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 10 },
   greeting: { fontSize: 14 },
   userName: { fontSize: 22, fontWeight: '800', marginTop: 2 },
-  themeBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1,
+  iconBtn: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, gap: 8, marginBottom: 20,
   },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', padding: 10,
-    borderRadius: 10, marginBottom: 20, gap: 8,
-  },
-  statusText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  cardsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  card: {
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 13, fontWeight: '700' },
+  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  statCard: {
     flex: 1, borderRadius: 16, padding: 20, alignItems: 'center',
     borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  cardIconWrap: {
-    width: 48, height: 48, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 10,
-  },
-  cardNumber: { fontSize: 32, fontWeight: '800' },
-  cardLabel: { fontSize: 13, marginTop: 4 },
-  sectionLabel: { fontSize: 14, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  statNumber: { fontSize: 32, fontWeight: '800' },
+  statLabel: { fontSize: 13, marginTop: 4 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  actionsGrid: { gap: 10, marginBottom: 16 },
   actionCard: {
-    borderRadius: 16, padding: 18, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
-  },
-  actionLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  actionTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  actionSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
-  syncCard: {
     borderRadius: 16, padding: 16, flexDirection: 'row',
-    alignItems: 'center', gap: 12, marginTop: 10, borderWidth: 1,
+    alignItems: 'center', borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  syncText: { fontSize: 15, fontWeight: '600', flex: 1 },
-  pendingBadge: {
+  actionIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  actionBody: { flex: 1 },
+  actionTitle: { fontSize: 15, fontWeight: '700' },
+  actionSub: { fontSize: 12, marginTop: 2 },
+  syncButton: {
+    borderRadius: 16, padding: 16, flexDirection: 'row',
+    alignItems: 'center', gap: 12, marginTop: 6, borderWidth: 1,
+  },
+  syncLabel: { fontSize: 15, fontWeight: '600', flex: 1 },
+  badge: {
     width: 26, height: 26, borderRadius: 13,
     justifyContent: 'center', alignItems: 'center',
   },
-  pendingBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  logoutButton: {
+  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  logoutRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, marginTop: 28, padding: 14,
   },
-  logoutText: { fontSize: 15, fontWeight: '600' },
+  logoutLabel: { fontSize: 15, fontWeight: '600' },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator,
@@ -6,12 +6,14 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
-import { addPendingRecord, initDB } from '../lib/db';
+import { addPendingRecord, initDB, getPendingRecords } from '../lib/db';
+import { request } from '../lib/api-client';
 
 interface InspectionData {
   codeProducteur: string; nomProducteur: string; codeUniqueParcelle: string;
   dateInspection: string; observations: string; conformite: string;
   actionsCorrectives: string; gpsInspection: string; inspecteur: string;
+  region?: string; commune?: string; district?: string;
 }
 
 const initialForm: InspectionData = {
@@ -26,13 +28,94 @@ export default function InspectionScreen({ navigation, route }: any) {
   const [form, setForm] = useState<InspectionData>(initialForm);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingProducer, setLoadingProducer] = useState(false);
+  const codeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     initDB();
     if (route?.params?.prefillProducer) {
       setForm(prev => ({ ...prev, codeProducteur: route.params.prefillProducer }));
+      lookupProducer(route.params.prefillProducer);
     }
   }, [route?.params]);
+
+  const lookupProducer = async (code: string) => {
+    if (!code || code.trim().length < 2) {
+      setForm(prev => ({ ...prev, nomProducteur: '', region: '', commune: '', district: '' }));
+      return;
+    }
+
+    const trimmed = code.trim();
+    const local = lookupProducerLocal(trimmed);
+    if (local) {
+      setForm(prev => ({
+        ...prev,
+        nomProducteur: local.name || prev.nomProducteur,
+        region: local.region || prev.region,
+        commune: local.commune || prev.commune,
+        district: local.district || prev.district,
+      }));
+      return;
+    }
+
+    setLoadingProducer(true);
+    try {
+      const data = await request<any>(`/api/producers/?search=${encodeURIComponent(trimmed)}&page_size=1`);
+      const producer = Array.isArray(data?.results) ? data.results[0] : data?.[0];
+      if (producer) {
+        setForm(prev => ({
+          ...prev,
+          nomProducteur: producer.name || prev.nomProducteur,
+          region: producer.region_name || producer.region || prev.region,
+          commune: producer.commune_name || producer.commune || prev.commune,
+          district: producer.district_name || producer.district || prev.district,
+        }));
+      }
+    } catch {
+      // silent on lookup failure
+    } finally {
+      setLoadingProducer(false);
+    }
+  };
+
+  const lookupProducerLocal = (code: string): { name?: string; region?: string; commune?: string; district?: string } | null => {
+    try {
+      const records = getPendingRecords();
+      const lowered = code.toLowerCase();
+      for (const record of records) {
+        try {
+          const data = JSON.parse(record.data);
+          const candidate = (data.codeProducteur || data.code_producteur || '').toLowerCase();
+          const name = data.nomProducteur || data.nom_producteur || data.name || '';
+          if (candidate && lowered.includes(candidate) && name) {
+            return {
+              name,
+              region: data.region || data.region_name || '',
+              commune: data.commune || data.commune_name || '',
+              district: data.district || data.district_name || '',
+            };
+          }
+        } catch {
+          // skip invalid local record
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return null;
+  };
+
+  const handleCodeChange = (value: string) => {
+    updateField('codeProducteur', value);
+    if (codeTimeoutRef.current) clearTimeout(codeTimeoutRef.current);
+    codeTimeoutRef.current = setTimeout(() => lookupProducer(value), 400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (codeTimeoutRef.current) clearTimeout(codeTimeoutRef.current);
+    };
+  }, []);
 
   const updateField = (key: keyof InspectionData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -92,16 +175,26 @@ export default function InspectionScreen({ navigation, route }: any) {
     <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
       <View style={styles.fieldGroup}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Code producteur *</Text>
-        <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.codeProducteur} onChangeText={(v) => updateField('codeProducteur', v)}
-          placeholderTextColor={theme.textMuted} placeholder="Code producteur" />
+        <View style={styles.inputRow}>
+          <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+            value={form.codeProducteur}
+            onChangeText={handleCodeChange}
+            placeholderTextColor={theme.textMuted}
+            placeholder="Code producteur"
+            autoCapitalize="characters"
+          />
+          {loadingProducer && <ActivityIndicator color={theme.primary} style={styles.inlineLoader} />}
+        </View>
       </View>
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Nom du producteur *</Text>
         <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.nomProducteur} onChangeText={(v) => updateField('nomProducteur', v)}
-          placeholderTextColor={theme.textMuted} placeholder="Nom et prénom" />
+          value={form.nomProducteur}
+          onChangeText={(v) => updateField('nomProducteur', v)}
+          placeholderTextColor={theme.textMuted}
+          placeholder="Nom et prénom"
+        />
       </View>
 
       <View style={styles.fieldGroup}>
@@ -202,6 +295,8 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
   input: { borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  inlineLoader: { marginRight: 6 },
   textArea: { height: 100, textAlignVertical: 'top' },
   optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   optionChip: {

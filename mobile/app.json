@@ -1,17 +1,20 @@
 {
   "expo": {
     "name": "Videeko Mobile",
-    "slug": "videeko-mobile",
+    "slug": "videeko-vanilla",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "videeko",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "enabled": false
     },
     "ios": {
       "supportsTablet": true,
@@ -33,16 +36,21 @@
         "CAMERA",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "package": "com.misaina23.videeko.vanilla",
+      "windowSoftInputMode": "adjustResize",
+      "navigationBarColor": "#FFFFFF",
+      "statusBarColor": "#0D9488",
+      "statusBarStyle": "light"
     },
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "extra": {
-      "apiUrl": "http://192.168.1.131:8000",
+      "apiUrl": "https://rekoma-api.onrender.com",
       "eas": {
-        "projectId": "videeko-mobile"
+        "projectId": "a1bb272b-3ca4-4531-ba4d-5b01162d60a0"
       }
     },
     "plugins": [
@@ -53,7 +61,9 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      "./plugins/withRemoveEnableBundleCompression.js"
+    ],
+    "owner": "misaina23"
   }
 }
