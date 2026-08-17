@@ -5,9 +5,16 @@ import logging
 from django.db.models import Q
 from rest_framework import serializers
 from core.models import Region, Commune, District
-from .models import Producer, Cooperative
+from .models import Producer, Cooperative, ProducerPhoto
 
 logger = logging.getLogger(__name__)
+
+
+class ProducerPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProducerPhoto
+        fields = ['id', 'producer', 'photo', 'caption', 'taken_at', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class CooperativeSerializer(serializers.ModelSerializer):

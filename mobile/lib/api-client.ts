@@ -20,9 +20,10 @@ export async function request<T>(path: string, init: RequestInit = {}, retries =
 
   const attempt = async (attemptNumber: number): Promise<T> => {
     try {
+      const isFormData = init.body instanceof FormData;
       const response = await withTimeout(fetch(url, {
         headers: {
-          'Content-Type': 'application/json',
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
           ...(init.headers || {}),
         },
         ...init,

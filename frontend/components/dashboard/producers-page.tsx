@@ -16,6 +16,7 @@ import {
   Phone,
   Calendar,
   Loader2,
+  CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -264,6 +265,17 @@ export function ProducersPage() {
     }
   }
 
+  const handleActivate = async (producer: Producer) => {
+    try {
+      await producersApi.activate(producer.id)
+      toast.success("Producteur activé avec succès")
+      invalidateProducers()
+      refresh()
+    } catch {
+      toast.error("Erreur lors de l'activation du producteur")
+    }
+  }
+
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -414,6 +426,12 @@ export function ProducersPage() {
                             <Trash2 className="w-4 h-4 mr-2" />
                             Supprimer
                           </DropdownMenuItem>
+                          {producer.status === 'pending' && (
+                            <DropdownMenuItem onClick={() => handleActivate(producer)}>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Activer
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

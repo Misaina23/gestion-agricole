@@ -235,6 +235,39 @@ class Producer(TimeStampedModel):
         return self.parcels.aggregate(models.Sum('vanilla_plants'))['vanilla_plants__sum'] or 0
 
 
+class ProducerPhoto(TimeStampedModel):
+    """Additional photos for producers"""
+    producer = models.ForeignKey(
+        Producer,
+        on_delete=models.CASCADE,
+        related_name='gallery',
+        verbose_name='Producteur'
+    )
+    photo = models.ImageField(
+        upload_to='producers/gallery/',
+        verbose_name='Photo'
+    )
+    caption = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name='Legende'
+    )
+    taken_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Date de prise'
+    )
+
+    class Meta:
+        verbose_name = 'Photo de producteur'
+        verbose_name_plural = 'Photos de producteurs'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Photo {self.producer.code} - {self.created_at.strftime('%Y-%m-%d')}"
+
+
 class Cooperative(TimeStampedModel):
     """Cooperative/Producer Group model"""
     name = models.CharField(max_length=200, unique=True, verbose_name='Nom')

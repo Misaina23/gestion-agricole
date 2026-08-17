@@ -100,7 +100,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'phone', 'region', 'commune',
-            'is_supervisor', 'is_admin'
+            'is_supervisor', 'is_admin', 'platform'
         ]
     
     def validate(self, attrs):
@@ -124,7 +124,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
             registration_status='approved',
             is_active=True,
             is_staff=is_admin or is_supervisor,
-            platform='web'
         )
         user.set_password(password)
         user.save()

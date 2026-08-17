@@ -274,7 +274,12 @@ export const producersApi = {
   productions: (id: number) => apiFetch<Production[]>(`/producers/${id}/productions/`),
   
   inspections: (id: number) => apiFetch<Inspection[]>(`/producers/${id}/inspections/`),
-  
+
+  activate: (id: number) =>
+    apiFetch<Producer>(`/producers/${id}/activate/`, {
+      method: 'POST',
+    }),
+
   exportExcel: async (_params?: Record<string, string>) => {
     console.warn('Export Excel non disponible dans cette version.')
   },

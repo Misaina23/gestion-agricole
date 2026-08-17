@@ -35,7 +35,7 @@ export default function AIAdviceScreen({ navigation }: any) {
   const loadDailyTip = async () => {
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const data = await request<{ tip: string }>('/ai/advice/', {
+      const data = await request<{ tip: string }>('/api/ai/advice/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTip(data.tip);
@@ -48,7 +48,7 @@ export default function AIAdviceScreen({ navigation }: any) {
     setRefreshing(true);
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const data = await request<any>('/ai/recommendations/', {
+      const data = await request<any>('/api/ai/recommendations/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRecommendations(data.results || data);
@@ -63,7 +63,7 @@ export default function AIAdviceScreen({ navigation }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const data = await request<any>('/ai/recommendations/generate_for_user/', {
+      const data = await request<any>('/api/ai/recommendations/generate_for_user/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function AIAdviceScreen({ navigation }: any) {
   const markRead = async (id: number) => {
     try {
       const token = await AsyncStorage.getItem('user_token');
-      await request(`/ai/recommendations/${id}/mark_read/`, {
+      await request(`/api/ai/recommendations/${id}/mark_read/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -97,7 +97,7 @@ export default function AIAdviceScreen({ navigation }: any) {
   const markApplied = async (id: number) => {
     try {
       const token = await AsyncStorage.getItem('user_token');
-      await request(`/ai/recommendations/${id}/mark_applied/`, {
+      await request(`/api/ai/recommendations/${id}/mark_applied/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

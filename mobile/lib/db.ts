@@ -1,7 +1,7 @@
 ﻿import * as SQLite from 'expo-sqlite';
 import Constants from 'expo-constants';
 
-const DEFAULT_API_URL = 'http://192.168.1.131:8000';
+const DEFAULT_API_URL = 'https://gestion-agricole-1-ajdy.onrender.com';
 
 export const normalizeApiUrl = (url: string) => url.replace(/\/$/, '');
 

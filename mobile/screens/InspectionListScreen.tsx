@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { getPendingRecords } from '../lib/db';
 
 interface Record {
   type: string; nomPrenom?: string; nomProducteur?: string;
@@ -18,9 +18,8 @@ export default function InspectionListScreen({ navigation }: any) {
   useFocusEffect(useCallback(() => { loadRecords(); }, []));
 
   const loadRecords = async () => {
-    const data = await AsyncStorage.getItem('pending_records');
-    const all = data ? JSON.parse(data) : [];
-    setRecords(all.reverse());
+    const records = getPendingRecords();
+    setRecords(records.reverse());
   };
 
   const filtered = filter === 'all' ? records : records.filter(r => r.type === filter);

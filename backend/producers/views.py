@@ -16,12 +16,13 @@ import qrcode
 import io
 import os
 
-from .models import Producer, Cooperative
+from .models import Producer, Cooperative, ProducerPhoto
 from .serializers import (
     ProducerListSerializer,
     ProducerDetailSerializer,
     ProducerCreateUpdateSerializer,
-    CooperativeSerializer
+    CooperativeSerializer,
+    ProducerPhotoSerializer
 )
 from core.export_utils import build_export_response
 
@@ -145,6 +146,19 @@ class ProducerViewSet(viewsets.ModelViewSet):
         }
         return Response(stats)
     
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        """Activate a pending producer"""
+        producer = self.get_object()
+        if producer.status != 'pending':
+            return Response(
+                {'detail': 'Ce producteur n\'est pas en attente.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        producer.status = 'active'
+        producer.save()
+        return Response(ProducerDetailSerializer(producer).data)
+
     @action(detail=True, methods=['get'])
     def parcels(self, request, pk=None):
         """Get all parcels for a producer"""
@@ -185,6 +199,18 @@ class ProducerViewSet(viewsets.ModelViewSet):
         producer.save()
         return Response(ProducerDetailSerializer(producer).data)
     
+    @action(detail=True, methods=['post'])
+    def add_photo(self, request, pk=None):
+        """Add a photo to a producer"""
+        producer = self.get_object()
+        serializer = ProducerPhotoSerializer(data={
+            **request.data,
+            'producer': producer.id
+        })
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['get'])
     def export(self, request):
         """Export producers data in xlsx, csv, pdf, or json format"""

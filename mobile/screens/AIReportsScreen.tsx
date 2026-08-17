@@ -41,7 +41,7 @@ export default function AIReportsScreen({ navigation }: any) {
   const loadReports = async () => {
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const data = await request<any>('/ai/reports/', {
+      const data = await request<any>('/api/ai/reports/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReports(data.results || data || []);
@@ -71,7 +71,7 @@ export default function AIReportsScreen({ navigation }: any) {
       };
       if (region) body.region = region;
 
-      await request('/ai/reports/generate_report/', {
+      await request('/api/ai/reports/generate_report/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

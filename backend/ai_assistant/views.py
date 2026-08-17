@@ -283,7 +283,7 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
             parcel__producer__in=Producer.objects.filter(registered_by=user)
         ).count()
 
-        report_url = '/api/ai/reports/generate/'
+        report_url = '/api/ai/reports/generate_report/'
         return {
             'response': (
                 f"Vos statistiques : {total_producers} producteurs, "
