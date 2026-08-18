@@ -60,12 +60,6 @@ export default function HistoryScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <View style={[styles.appBar, { backgroundColor: theme.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.appBarBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Historique</Text>
-      </View>
       <View style={[styles.tabs, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'sync' && { backgroundColor: theme.primary }]}
@@ -114,9 +108,6 @@ export default function HistoryScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  appBar: { flexDirection: 'row', alignItems: 'center', paddingTop: 48, paddingBottom: 12, paddingHorizontal: 8, gap: 8 },
-  appBarBtn: { padding: 8, borderRadius: 12 },
-  appBarTitle: { color: '#fff', fontSize: 20, fontWeight: '700', flex: 1 },
   tabs: { flexDirection: 'row', margin: 16, borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   tab: { flex: 1, padding: 12, alignItems: 'center' },
   tabText: { fontSize: 14, fontWeight: '600' },

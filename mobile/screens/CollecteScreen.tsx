@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -113,7 +113,7 @@ export default function CollecteScreen({ navigation, route }: any) {
         data: JSON.stringify(record),
         createdAt: new Date().toISOString(),
       });
-      Alert.alert('✅ Succès', 'Données enregistrées localement');
+      Alert.alert('Succès', 'Données enregistrées localement');
       setForm(initialForm);
     } catch {
       Alert.alert('Erreur', "Échec de l'enregistrement");
@@ -150,7 +150,7 @@ export default function CollecteScreen({ navigation, route }: any) {
           placeholderTextColor={theme.textMuted}
         />
         <TouchableOpacity
-          style={[styles.gpsButton, { backgroundColor: theme.primary }]}
+          style={[styles.gpsButton, { backgroundColor: theme.success }]}
           onPress={() => captureGPS(field)}
           disabled={loadingGPS}
         >
@@ -171,79 +171,71 @@ export default function CollecteScreen({ navigation, route }: any) {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={[styles.appBar, { backgroundColor: theme.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.appBarBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Nouvelle Collecte</Text>
-      </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: theme.bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.bg }}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-      <SectionHeader icon="👤" title="Informations Producteur" />
-      {renderInput('Nom du site *', 'nomSite')}
-      {renderInput('Nom et prénom *', 'nomPrenom')}
-      {renderInput("Code producteur (généré automatiquement)", 'codeProducteur')}
-      {renderInput('Téléphone', 'telephone', { keyboard: 'phone-pad' })}
-      {renderInput("Date d'intégration", 'dateIntegration', { placeholder: 'JJ/MM/AAAA' })}
+        <SectionHeader icon="👤" title="Informations Producteur" />
+        {renderInput('Nom du site *', 'nomSite')}
+        {renderInput('Nom et prénom *', 'nomPrenom')}
+        {renderInput("Code producteur (généré automatiquement)", 'codeProducteur')}
+        {renderInput('Téléphone', 'telephone', { keyboard: 'phone-pad' })}
+        {renderInput("Date d'intégration", 'dateIntegration', { placeholder: 'JJ/MM/AAAA' })}
 
-      <SectionHeader icon="🌱" title="Parcelle" />
-      {renderInput('Superficie (ha)', 'superficie', { keyboard: 'numeric' })}
-      {renderInput('Code unique parcelle', 'codeUniqueParcelle')}
-      {renderInput('Culture', 'culture')}
-      {renderInput('Interculture', 'interculture')}
-      {renderInput("Nombre d'arbres", 'nombreArbres', { keyboard: 'numeric' })}
+        <SectionHeader icon="🌱" title="Parcelle" />
+        {renderInput('Superficie (ha)', 'superficie', { keyboard: 'numeric' })}
+        {renderInput('Code unique parcelle', 'codeUniqueParcelle')}
+        {renderInput('Culture', 'culture')}
+        {renderInput('Interculture', 'interculture')}
+        {renderInput("Nombre d'arbres", 'nombreArbres', { keyboard: 'numeric' })}
 
-      <SectionHeader icon="📍" title="Coordonnées GPS" />
-      {renderGPSButton('GPS Parcelle 1 *', 'gpsParcelle1')}
-      {renderGPSButton('GPS Parcelle 2', 'gpsParcelle2')}
-      {renderGPSButton('GPS Parcelle 3', 'gpsParcelle3')}
-      {renderGPSButton('GPS Ménage', 'gpsMenage')}
-      {renderInput('Commune', 'commune')}
-      {renderInput('District', 'district')}
-      {renderInput('Région', 'region')}
+        <SectionHeader icon="📍" title="Coordonnées GPS" />
+        {renderGPSButton('GPS Parcelle 1 *', 'gpsParcelle1')}
+        {renderGPSButton('GPS Parcelle 2', 'gpsParcelle2')}
+        {renderGPSButton('GPS Parcelle 3', 'gpsParcelle3')}
+        {renderGPSButton('GPS Ménage', 'gpsMenage')}
+        {renderInput('Commune', 'commune')}
+        {renderInput('District', 'district')}
+        {renderInput('Région', 'region')}
 
-      <SectionHeader icon="📊" title="Données Financières & Récolte" />
-      {renderInput("Chiffre d'affaires", 'chiffreAffaires', { keyboard: 'numeric' })}
-      {renderInput('Estimation récolte', 'estimationRecolte')}
-      {renderInput('Rendement', 'rendement')}
-      {renderInput('Quantité livrée', 'quantiteLivree', { keyboard: 'numeric' })}
+        <SectionHeader icon="📊" title="Données Financières & Récolte" />
+        {renderInput("Chiffre d'affaires", 'chiffreAffaires', { keyboard: 'numeric' })}
+        {renderInput('Estimation récolte', 'estimationRecolte')}
+        {renderInput('Rendement', 'rendement')}
+        {renderInput('Quantité livrée', 'quantiteLivree', { keyboard: 'numeric' })}
 
-      <SectionHeader icon="🔍" title="Inspection" />
-      {renderInput('Date dernière inspection', 'dateDerniereInspection', { placeholder: 'JJ/MM/AAAA' })}
-      {renderInput('Nom du CI', 'nomCI')}
+        <SectionHeader icon="🔍" title="Inspection" />
+        {renderInput('Date dernière inspection', 'dateDerniereInspection', { placeholder: 'JJ/MM/AAAA' })}
+        {renderInput('Nom du CI', 'nomCI')}
 
-      <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor: theme.primary }]}
-        onPress={handleSubmit}
-        disabled={saving}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
-        <Text style={styles.submitText}>
-          {saving ? 'Enregistrement...' : 'Enregistrer la collecte'}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.submitButton, { backgroundColor: theme.success }]}
+          onPress={handleSubmit}
+          disabled={saving}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+          <Text style={styles.submitText}>
+            {saving ? 'Enregistrement...' : 'Enregistrer la collecte'}
+          </Text>
+        </TouchableOpacity>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
-    </View>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  appBar: {
-    flexDirection: 'row', alignItems: 'center', paddingTop: 48,
-    paddingBottom: 12, paddingHorizontal: 8, gap: 8,
-  },
-  appBarBtn: { padding: 8, borderRadius: 12 },
-  appBarTitle: { color: '#fff', fontSize: 20, fontWeight: '700', flex: 1 },
   content: { padding: 16 },
-  sectionHeader: { marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottomWidth: 2 },
-  sectionTitle: { fontSize: 17, fontWeight: '800' },
+  sectionHeader: { marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottomWidth: 1.5 },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
   fieldGroup: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
   input: { borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1 },

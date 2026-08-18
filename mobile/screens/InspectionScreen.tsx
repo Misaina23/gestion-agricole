@@ -260,7 +260,7 @@ export default function InspectionScreen({ navigation, route }: any) {
         <View style={styles.gpsRow}>
           <TextInput style={[styles.input, { flex: 1, backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
             value={form.gpsInspection} editable={false} placeholder="Appuyez pour capturer" placeholderTextColor={theme.textMuted} />
-          <TouchableOpacity style={[styles.gpsButton, { backgroundColor: theme.primary }]} onPress={captureGPS} disabled={loadingGPS}>
+          <TouchableOpacity style={[styles.gpsButton, { backgroundColor: theme.success }]} onPress={captureGPS} disabled={loadingGPS}>
             {loadingGPS ? <ActivityIndicator color="#fff" size="small" /> :
               <Ionicons name="locate-outline" size={22} color="#fff" />}
           </TouchableOpacity>
@@ -275,7 +275,7 @@ export default function InspectionScreen({ navigation, route }: any) {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor: theme.primary }]}
+        style={[styles.submitButton, { backgroundColor: theme.success }]}
         onPress={handleSubmit}
         disabled={saving}
         activeOpacity={0.85}

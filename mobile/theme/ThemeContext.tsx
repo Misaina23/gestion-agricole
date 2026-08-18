@@ -28,6 +28,8 @@ interface Theme {
   accentBg: string;
   infoBg: string;
   inputBg: string;
+  navy: string;
+  navyMuted: string;
 }
 
 interface ThemeContextType {
@@ -66,6 +68,8 @@ const lightTheme: Theme = {
   accentBg: '#CCFBF1',
   infoBg: '#CCFBF1',
   inputBg: '#F1F5F9',
+  navy: '#1E3A8A',
+  navyMuted: '#E0E7FF',
 };
 
 const darkTheme: Theme = {
@@ -94,6 +98,8 @@ const darkTheme: Theme = {
   accentBg: '#134E4A',
   infoBg: '#134E4A',
   inputBg: '#1F2937',
+  navy: '#60A5FA',
+  navyMuted: '#1E3A8A',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);

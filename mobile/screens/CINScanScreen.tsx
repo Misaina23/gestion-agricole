@@ -191,7 +191,7 @@ export default function CINScanScreen({ navigation, route }: any) {
             <Ionicons name="refresh" size={20} color={theme.text} />
             <Text style={[styles.btnText, { color: theme.text }]}>Reprendre</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: theme.primary }]} onPress={confirmSide}>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: theme.success }]} onPress={confirmSide}>
             <Ionicons name="checkmark" size={20} color="#fff" />
             <Text style={[styles.btnText, { color: '#fff' }]}>
               {preview.side === 'recto' ? 'Continuer (Verso)' : 'Valider'}

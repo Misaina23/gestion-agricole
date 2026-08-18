@@ -224,7 +224,7 @@ export default function CINValidationScreen({ navigation, route }: any) {
       </View>
 
       <TouchableOpacity
-        style={[styles.submit, { backgroundColor: theme.primary }]}
+        style={[styles.submit, { backgroundColor: theme.success }]}
         onPress={handleSave}
         disabled={saving}
       >

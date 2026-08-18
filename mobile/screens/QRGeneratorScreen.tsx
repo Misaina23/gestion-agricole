@@ -77,13 +77,6 @@ export default function QRGeneratorScreen({ route, navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={[styles.appBar, { backgroundColor: theme.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.appBarBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Générer QR Code</Text>
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.segment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <TouchableOpacity
@@ -140,9 +133,6 @@ export default function QRGeneratorScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  appBar: { flexDirection: 'row', alignItems: 'center', paddingTop: 48, paddingBottom: 12, paddingHorizontal: 8, gap: 8 },
-  appBarBtn: { padding: 8, borderRadius: 12 },
-  appBarTitle: { color: '#fff', fontSize: 20, fontWeight: '700', flex: 1 },
   content: { padding: 16, alignItems: 'center' },
   segment: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, overflow: 'hidden', width: '100%', marginBottom: 20 },
   segmentBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },

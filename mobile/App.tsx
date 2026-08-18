@@ -75,7 +75,7 @@ function RootNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Paramètres', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Paramètres', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
           </>
         ) : (
           <>
@@ -86,33 +86,33 @@ function RootNavigator() {
               options={{
                 headerShown: true,
                 title: 'Nouvelle Collecte',
-                headerStyle: { backgroundColor: theme.primary },
+                headerStyle: { backgroundColor: theme.navy },
                 headerTintColor: '#fff',
                 headerTitleStyle: { fontWeight: '700' },
               }}
             />
-            <Stack.Screen name="InspectionList" component={InspectionListScreen} options={{ headerShown: true, title: 'Inspections', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="InspectionList" component={InspectionListScreen} options={{ headerShown: true, title: 'Inspections', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
             <Stack.Screen
               name="Inspection"
               component={InspectionScreen}
               options={{
                 headerShown: true,
                 title: 'Nouvelle Inspection',
-                headerStyle: { backgroundColor: theme.primary },
+                headerStyle: { backgroundColor: theme.navy },
                 headerTintColor: '#fff',
                 headerTitleStyle: { fontWeight: '700' },
               }}
             />
             <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="QRGenerator" component={QRGeneratorScreen} options={{ headerShown: true, title: 'Générer QR Code', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="ProducersList" component={ProducersListScreen} options={{ headerShown: true, title: 'Liste des producteurs', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} options={{ headerShown: true, title: 'Ajouter des photos', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="QRGenerator" component={QRGeneratorScreen} options={{ headerShown: true, title: 'Générer QR Code', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="ProducersList" component={ProducersListScreen} options={{ headerShown: true, title: 'Liste des producteurs', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} options={{ headerShown: true, title: 'Ajouter des photos', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
             <Stack.Screen name="CINScan" component={CINScanScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="CINValidation" component={CINValidationScreen} options={{ headerShown: true, title: 'Vérification CIN', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="AIAdvice" component={AIAdviceScreen} options={{ headerShown: true, title: 'Conseils IA', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="AIReports" component={AIReportsScreen} options={{ headerShown: true, title: 'Rapports IA', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'Historique', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
-            <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Paramètres', headerStyle: { backgroundColor: theme.primary }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="CINValidation" component={CINValidationScreen} options={{ headerShown: true, title: 'Vérification CIN', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="AIAdvice" component={AIAdviceScreen} options={{ headerShown: true, title: 'Conseils IA', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="AIReports" component={AIReportsScreen} options={{ headerShown: true, title: 'Rapports IA', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'Historique', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Paramètres', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
           </>
         )}
       </Stack.Navigator>

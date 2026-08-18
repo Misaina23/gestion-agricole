@@ -23,12 +23,9 @@ export default function LoginScreen({ navigation }: any) {
     setLoading(true);
     try {
       const result = await login(email, password);
-      if (result.success) {
-        navigation.replace('Main');
-      } else {
+      if (!result.success) {
         Alert.alert('Erreur', result.error || 'Identifiants incorrects');
       }
-
     } catch {
       Alert.alert('Erreur', 'Connexion échouée');
     } finally {

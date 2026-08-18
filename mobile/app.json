@@ -48,7 +48,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "extra": {
-      "apiUrl": "https://rekoma-api.onrender.com",
+      "apiUrl": "https://gestion-agricole-1-ajdy.onrender.com",
       "eas": {
         "projectId": "a1bb272b-3ca4-4531-ba4d-5b01162d60a0"
       }
