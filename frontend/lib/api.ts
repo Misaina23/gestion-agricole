@@ -19,17 +19,17 @@ export interface Producer {
   id: number
   code: string
   name: string
-  region: string
+  region: number
   region_name?: string
-  district?: string
+  district?: number
   district_name?: string
-  commune: string
+  commune: number
   commune_name?: string
-  fokontany?: string
+  fokontany?: number
   phone: string | null
   email?: string | null
   cin?: string | null
-  status: 'active' | 'pending' | 'inactive'
+  status: 'active' | 'pending' | 'inactive' | 'suspended'
   is_certified: boolean
   certification_date?: string | null
   certification_number?: string | null
@@ -280,12 +280,14 @@ export const producersApi = {
       method: 'POST',
     }),
 
-  exportExcel: async (_params?: Record<string, string>) => {
-    console.warn('Export Excel non disponible dans cette version.')
+  exportExcel: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/producers/export/${query}`, `producteurs_export_${Date.now()}.xlsx`)
   },
 
-  exportPdf: async (_params?: Record<string, string>) => {
-    console.warn('Export PDF non disponible dans cette version.')
+  exportPdf: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/producers/export/${query}`, `producteurs_export_${Date.now()}.pdf`)
   },
 }
 
@@ -358,12 +360,14 @@ export const parcelsApi = {
     }>>(`/parcels/map_data/${query}`)
   },
   
-  exportExcel: async (_params?: Record<string, string>) => {
-    console.warn('Export Excel non disponible dans cette version.')
+  exportExcel: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/parcels/export/${query}`, `parcelles_export_${Date.now()}.xlsx`)
   },
   
-  exportPdf: async (_params?: Record<string, string>) => {
-    console.warn('Export PDF non disponible dans cette version.')
+  exportPdf: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/parcels/export/${query}`, `parcelles_export_${Date.now()}.pdf`)
   },
 }
 
@@ -417,12 +421,14 @@ export const productionsApi = {
   
   stats: () => apiFetch<DashboardStats['productions']>('/productions/stats/'),
   
-  exportExcel: async (_params?: Record<string, string>) => {
-    console.warn('Export Excel non disponible dans cette version.')
+  exportExcel: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/productions/export/${query}`, `productions_export_${Date.now()}.xlsx`)
   },
   
-  exportPdf: async (_params?: Record<string, string>) => {
-    console.warn('Export PDF non disponible dans cette version.')
+  exportPdf: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/productions/export/${query}`, `productions_export_${Date.now()}.pdf`)
   },
 }
 
@@ -452,12 +458,14 @@ export const inspectionsApi = {
   
   stats: () => apiFetch<DashboardStats['inspections']>('/inspections/stats/'),
   
-  exportExcel: async (_params?: Record<string, string>) => {
-    console.warn('Export Excel non disponible dans cette version.')
+  exportExcel: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/inspections/export/${query}`, `inspections_export_${Date.now()}.xlsx`)
   },
   
-  exportPdf: async (_params?: Record<string, string>) => {
-    console.warn('Export PDF non disponible dans cette version.')
+  exportPdf: async (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    await downloadFile(`/inspections/export/${query}`, `inspections_export_${Date.now()}.pdf`)
   },
 }
 
@@ -586,7 +594,7 @@ export const aiApi = {
     const body: Record<string, any> = { report_type: 'global' }
     if (month) body.period_start = month
     if (year) body.period_start = `${year}-${month || '01'}-01`
-    return apiFetch<MonthlyReport>('/ai/reports/generate/', {
+    return apiFetch<MonthlyReport>('/ai/reports/generate_report/', {
       method: 'POST',
       body: JSON.stringify(body),
     })

@@ -37,8 +37,8 @@ class ProducerListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     region_name = serializers.CharField(source='region.name', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
-    district_name = serializers.CharField(source='district.name', read_only=True)
-    cooperative_name = serializers.CharField(source='cooperative.name', read_only=True)
+    district_name = serializers.SerializerMethodField()
+    cooperative_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     parcels_count = serializers.ReadOnlyField(source='ann_parcels_count')
     total_area = serializers.ReadOnlyField(source='ann_total_area')
@@ -52,14 +52,20 @@ class ProducerListSerializer(serializers.ModelSerializer):
             'parcels_count', 'total_area', 'created_at'
         ]
 
+    def get_district_name(self, obj):
+        return obj.district.name if obj.district else None
+
+    def get_cooperative_name(self, obj):
+        return obj.cooperative.name if obj.cooperative else None
+
 
 class ProducerDetailSerializer(serializers.ModelSerializer):
     """Full serializer for detail views"""
     region_name = serializers.CharField(source='region.name', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
-    district_name = serializers.CharField(source='district.name', read_only=True)
-    fokontany_name = serializers.CharField(source='fokontany.name', read_only=True)
-    cooperative_name = serializers.CharField(source='cooperative.name', read_only=True)
+    district_name = serializers.SerializerMethodField()
+    fokontany_name = serializers.SerializerMethodField()
+    cooperative_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     registered_by_name = serializers.SerializerMethodField()
@@ -85,6 +91,15 @@ class ProducerDetailSerializer(serializers.ModelSerializer):
 
     def get_registered_by_name(self, obj):
         return obj.registered_by.full_name if obj.registered_by else None
+
+    def get_district_name(self, obj):
+        return obj.district.name if obj.district else None
+
+    def get_fokontany_name(self, obj):
+        return obj.fokontany.name if obj.fokontany else None
+
+    def get_cooperative_name(self, obj):
+        return obj.cooperative.name if obj.cooperative else None
 
 
 class ProducerCreateUpdateSerializer(serializers.ModelSerializer):

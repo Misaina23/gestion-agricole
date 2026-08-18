@@ -11,4 +11,5 @@ router.register(r'', ParcelViewSet, basename='parcel')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('export/', ParcelViewSet.as_view({'get': 'export'})),
 ]

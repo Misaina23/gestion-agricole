@@ -16,4 +16,5 @@ router.register(r'', InspectionViewSet, basename='inspection')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('export/', InspectionViewSet.as_view({'get': 'export'})),
 ]

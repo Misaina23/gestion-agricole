@@ -11,4 +11,5 @@ router.register(r'', ProductionViewSet, basename='production')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('export/', ProductionViewSet.as_view({'get': 'export'})),
 ]
