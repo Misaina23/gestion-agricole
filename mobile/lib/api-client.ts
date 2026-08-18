@@ -1,7 +1,7 @@
 import { API_URL } from './db';
 
-const DEFAULT_TIMEOUT = 15000;
-const MAX_RETRIES = 2;
+const DEFAULT_TIMEOUT = 30000;
+const MAX_RETRIES = 3;
 
 async function withTimeout<T>(promise: Promise<T>, ms = DEFAULT_TIMEOUT): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -54,7 +54,7 @@ export async function request<T>(path: string, init: RequestInit = {}, retries =
       if (isLastAttempt || !error.message?.includes('Délai de connexion dépassé')) {
         throw error;
       }
-      await new Promise(r => setTimeout(r, 800 * attemptNumber));
+      await new Promise(r => setTimeout(r, 1000 * attemptNumber));
       return attempt(attemptNumber + 1);
     }
   };

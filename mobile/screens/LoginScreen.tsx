@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   themeToggle: { position: 'absolute', top: 56, right: 24, zIndex: 10, padding: 8, borderRadius: 999, borderWidth: 1 },
   settingsLink: { position: 'absolute', top: 56, left: 24, zIndex: 10, padding: 8, borderRadius: 999, borderWidth: 1 },
   logoContainer: { alignItems: 'center', marginBottom: 36, marginTop: 24 },
-  logo: { width: 150, height: 150, marginBottom: 12 },
+  logo: { width: 100, height: 100, marginBottom: 12 },
   iconCircle: {
     width: 96, height: 96, borderRadius: 48,
     justifyContent: 'center', alignItems: 'center', marginBottom: 16,
