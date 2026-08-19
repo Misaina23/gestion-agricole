@@ -72,6 +72,10 @@ class MonthlyReportSerializer(serializers.ModelSerializer):
     generated_by_name = serializers.CharField(
         source='generated_by.get_full_name', read_only=True, default=''
     )
+    month = serializers.SerializerMethodField()
+    year = serializers.SerializerMethodField()
+    yield_data = serializers.SerializerMethodField()
+    recommendations = serializers.SerializerMethodField()
 
     class Meta:
         model = MonthlyReport
@@ -79,9 +83,30 @@ class MonthlyReportSerializer(serializers.ModelSerializer):
             'id', 'title', 'report_type', 'period_start', 'period_end',
             'summary', 'report_data', 'generated_file', 'status',
             'generated_by', 'generated_by_name', 'region',
+            'month', 'year', 'yield_data', 'recommendations',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_month(self, obj):
+        if obj.period_start:
+            return obj.period_start.strftime('%m')
+        return None
+
+    def get_year(self, obj):
+        if obj.period_start:
+            return obj.period_start.year
+        return None
+
+    def get_yield_data(self, obj):
+        if obj.report_data and isinstance(obj.report_data, dict):
+            return obj.report_data.get('kpis', {})
+        return {}
+
+    def get_recommendations(self, obj):
+        if obj.report_data and isinstance(obj.report_data, dict):
+            return obj.report_data.get('recommendations', [])
+        return []
 
 
 class GenerateReportSerializer(serializers.Serializer):

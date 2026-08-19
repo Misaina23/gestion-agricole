@@ -129,10 +129,7 @@ export default function AgriAssistantPanel() {
         return
       }
 
-      const month = new Date().toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "long" })
-      const year = new Date().getFullYear()
-
-      const report = await aiApi.generateMonthlyReport(month, year)
+      const report = await aiApi.generateMonthlyReport()
       setMonthlyReport(report)
       successAlert("Rapport généré", "Le rapport mensuel a été généré avec succès.")
     } catch (error: any) {

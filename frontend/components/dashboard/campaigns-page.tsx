@@ -43,10 +43,13 @@ const statusConfig: Record<string, { label: string; class: string }> = {
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [campaignsError, setCampaignsError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [regionFilter, setRegionFilter] = useState<string>("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false)
   const [isAssigningProducer, setIsAssigningProducer] = useState(false)
   const [isManageProducersOpen, setIsManageProducersOpen] = useState(false)
@@ -73,51 +76,44 @@ export function CampaignsPage() {
     status: 'active',
     page_size: '500',
   })
-  const visibleProducers = useMemo(() => {
-    const q = producerSearch.trim().toLowerCase()
-    const assignedIds = new Set((assignedProducers || []).map((a) => a.producer))
-    return (allActiveProducers || []).filter((p: Producer) => {
-      if (assignedIds.has(p.id)) return false
-      const matchesSearch = !q || `${p.name} ${p.code}`.toLowerCase().includes(q)
-      const matchesRegion =
-        producerRegionFilter === 'all' ||
-        String(p.region) === producerRegionFilter ||
-        p.region_name === producerRegionFilter
-      return matchesSearch && matchesRegion
+
+  const resetCampaignForm = () => ({
+    name: "",
+    description: "",
+    culture: "",
+    region: regions[0]?.id?.toString() || "",
+    start_date: "",
+    end_date: "",
+    budget: "",
+    status: "active",
+  })
+
+  const openCreateDialog = () => {
+    setCampaignForm(resetCampaignForm())
+    setIsAddDialogOpen(true)
+  }
+
+  const openEditDialog = (campaign: Campaign) => {
+    setEditingCampaign(campaign)
+    setCampaignForm({
+      name: campaign.name,
+      description: campaign.description || "",
+      culture: campaign.culture?.toString() || "",
+      region: campaign.region?.toString() || "",
+      start_date: campaign.start_date,
+      end_date: campaign.end_date,
+      budget: campaign.budget?.toString() || "",
+      status: campaign.status,
     })
-  }, [allActiveProducers, producerSearch, producerRegionFilter, assignedProducers])
-
-  const loadCampaigns = async () => {
-    try {
-      const res = await campaignsApi.list()
-      setCampaigns(res.results || [])
-    } finally {
-      setLoading(false)
-    }
+    setIsEditDialogOpen(true)
   }
 
-  const loadAssignedProducers = async (campaignId: number) => {
-    setIsLoadingAssignments(true)
-    try {
-      const res = await campaignProducersApi.list({ campaign: campaignId.toString() })
-      setAssignedProducers(res.results || [])
-    } catch (error) {
-      console.error('Failed to load campaign producers', error)
-      setAssignedProducers([])
-    } finally {
-      setIsLoadingAssignments(false)
-    }
+  const closeDialogs = () => {
+    setIsAddDialogOpen(false)
+    setIsEditDialogOpen(false)
+    setEditingCampaign(null)
+    setCampaignForm(resetCampaignForm())
   }
-
-  useEffect(() => {
-    loadCampaigns()
-  }, [])
-
-  useEffect(() => {
-    if (isManageProducersOpen && selectedCampaign) {
-      loadAssignedProducers(selectedCampaign.id)
-    }
-  }, [isManageProducersOpen, selectedCampaign])
 
   const handleAddCampaign = async () => {
     if (!campaignForm.name.trim() || !campaignForm.culture || !campaignForm.region || !campaignForm.start_date || !campaignForm.end_date) {
@@ -138,19 +134,8 @@ export function CampaignsPage() {
         status: campaignForm.status as Campaign['status'],
       })
       successAlert("Campagne créée", "La campagne a été créée avec succès.")
-      const res = await campaignsApi.list()
-      setCampaigns(res.results || [])
-      setCampaignForm({
-        name: "",
-        description: "",
-        culture: "",
-        region: regions[0]?.id?.toString() || "",
-        start_date: "",
-        end_date: "",
-        budget: "",
-        status: "active",
-      })
-      setIsAddDialogOpen(false)
+      await loadCampaigns()
+      closeDialogs()
     } catch (error: any) {
       console.error(error)
       errorAlert("Erreur", error?.message || "Impossible de créer la campagne.")
@@ -158,6 +143,86 @@ export function CampaignsPage() {
       setIsCreatingCampaign(false)
     }
   }
+
+  const handleEditCampaign = async () => {
+    if (!editingCampaign || !campaignForm.name.trim() || !campaignForm.culture || !campaignForm.region || !campaignForm.start_date || !campaignForm.end_date) {
+      errorAlert("Champs requis", "Veuillez remplir tous les champs obligatoires.")
+      return
+    }
+
+    setIsCreatingCampaign(true)
+    try {
+      await campaignsApi.update(editingCampaign.id, {
+        name: campaignForm.name.trim(),
+        description: campaignForm.description.trim() || undefined,
+        culture: Number(campaignForm.culture),
+        region: Number(campaignForm.region),
+        start_date: campaignForm.start_date,
+        end_date: campaignForm.end_date,
+        budget: campaignForm.budget ? Number(campaignForm.budget) : undefined,
+        status: campaignForm.status as Campaign['status'],
+      })
+      successAlert("Campagne mise à jour", "La campagne a été modifiée avec succès.")
+      await loadCampaigns()
+      closeDialogs()
+    } catch (error: any) {
+      console.error(error)
+      errorAlert("Erreur", error?.message || "Impossible de modifier la campagne.")
+    } finally {
+      setIsCreatingCampaign(false)
+    }
+  }
+
+  const loadCampaigns = async () => {
+    setCampaignsError(null)
+    try {
+      const res = await campaignsApi.list()
+      setCampaigns(res.results || [])
+    } catch (error: any) {
+      console.error('Failed to load campaigns', error)
+      setCampaignsError(error?.message || "Impossible de charger les campagnes.")
+      setCampaigns([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAssignedProducers = async (campaignId: number) => {
+    setIsLoadingAssignments(true)
+    try {
+      const res = await campaignProducersApi.list({ campaign: campaignId.toString() })
+      setAssignedProducers(res.results || [])
+    } catch (error) {
+      console.error('Failed to load campaign producers', error)
+      setAssignedProducers([])
+    } finally {
+      setIsLoadingAssignments(false)
+    }
+  }
+
+  const visibleProducers = useMemo(() => {
+    const q = producerSearch.trim().toLowerCase()
+    const assignedIds = new Set((assignedProducers || []).map((a) => a.producer))
+    return (allActiveProducers || []).filter((p: Producer) => {
+      if (assignedIds.has(p.id)) return false
+      const matchesSearch = !q || `${p.name} ${p.code}`.toLowerCase().includes(q)
+      const matchesRegion =
+        producerRegionFilter === 'all' ||
+        String(p.region) === producerRegionFilter ||
+        p.region_name === producerRegionFilter
+      return matchesSearch && matchesRegion
+    })
+  }, [allActiveProducers, producerSearch, producerRegionFilter, assignedProducers])
+
+  useEffect(() => {
+    loadCampaigns()
+  }, [])
+
+  useEffect(() => {
+    if (isManageProducersOpen && selectedCampaign) {
+      loadAssignedProducers(selectedCampaign.id)
+    }
+  }, [isManageProducersOpen, selectedCampaign])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -266,7 +331,7 @@ export function CampaignsPage() {
         <button
           type="button"
           className="rounded-xl bg-[#1e3a5f] px-4 py-2 text-white hover:bg-[#2d5a87]"
-          onClick={() => setIsAddDialogOpen(true)}
+          onClick={openCreateDialog}
         >
           Nouvelle campagne
         </button>
@@ -318,6 +383,12 @@ export function CampaignsPage() {
           </div>
         </div>
       </div>
+
+      {campaignsError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {campaignsError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
         <div className="flex flex-col gap-4 border-b border-slate-200/80 p-4 dark:border-slate-800">
@@ -426,6 +497,13 @@ export function CampaignsPage() {
                       </button>
                       <button
                         type="button"
+                        className="rounded-xl bg-[#1e3a5f] px-3 py-1 text-sm text-white transition-colors hover:bg-[#2d5a87]"
+                        onClick={() => openEditDialog(campaign)}
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
                         className="rounded-xl bg-red-600 px-3 py-1 text-sm text-white transition-colors hover:bg-red-700"
                         onClick={() => handleDeleteCampaign(campaign)}
                         disabled={isCreatingCampaign}
@@ -452,7 +530,7 @@ export function CampaignsPage() {
               <button
                 type="button"
                 className="text-[#1e3a5f] hover:text-[#0d304d]"
-                onClick={() => setIsAddDialogOpen(false)}
+                onClick={closeDialogs}
               >
                 Fermer
               </button>
@@ -563,7 +641,7 @@ export function CampaignsPage() {
               <button
                 type="button"
                 className="rounded-xl border border-[#c5ddf5] px-4 py-2 text-[#0a1628]"
-                onClick={() => setIsAddDialogOpen(false)}
+                onClick={closeDialogs}
               >
                 Annuler
               </button>
@@ -574,6 +652,145 @@ export function CampaignsPage() {
                  disabled={isCreatingCampaign}
                >
                  {isCreatingCampaign ? 'Enregistrement...' : 'Créer la campagne'}
+               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isEditDialogOpen && editingCampaign ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-[#0a1628]">Modifier la campagne</h2>
+                <p className="text-sm text-[#5a7a9a]">Mettre à jour les informations de la campagne.</p>
+              </div>
+              <button
+                type="button"
+                className="text-[#1e3a5f] hover:text-[#0d304d]"
+                onClick={closeDialogs}
+              >
+                Fermer
+              </button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Nom de la campagne</label>
+                <Input
+                  value={campaignForm.name}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })}
+                  placeholder="Campagne 2026-2027"
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Culture</label>
+                <Select
+                  value={campaignForm.culture}
+                  onValueChange={(value) => setCampaignForm({ ...campaignForm, culture: value })}
+                >
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cultures.map((culture) => (
+                      <SelectItem key={culture.id} value={culture.id.toString()}>
+                        {culture.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Région</label>
+                <Select
+                  value={campaignForm.region}
+                  onValueChange={(value) => setCampaignForm({ ...campaignForm, region: value })}
+                >
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regions.map((region) => (
+                      <SelectItem key={region.id} value={region.id.toString()}>
+                        {region.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0a1628]">Début</label>
+                  <Input
+                    type="date"
+                    value={campaignForm.start_date}
+                    onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })}
+                    className="border-[#c5ddf5]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0a1628]">Fin</label>
+                  <Input
+                    type="date"
+                    value={campaignForm.end_date}
+                    onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })}
+                    className="border-[#c5ddf5]"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Budget (€)</label>
+                <Input
+                  type="number"
+                  value={campaignForm.budget}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, budget: e.target.value })}
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Statut</label>
+                <Select
+                  value={campaignForm.status}
+                  onValueChange={(value) => setCampaignForm({ ...campaignForm, status: value })}
+                >
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="completed">Terminée</SelectItem>
+                    <SelectItem value="cancelled">Annulée</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Description</label>
+                <Input
+                  value={campaignForm.description}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, description: e.target.value })}
+                  placeholder="Objectifs, notes, etc."
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-xl border border-[#c5ddf5] px-4 py-2 text-[#0a1628]"
+                onClick={closeDialogs}
+              >
+                Annuler
+              </button>
+               <button
+                 type="button"
+                 className="rounded-xl bg-[#1e3a5f] px-4 py-2 text-white hover:bg-[#2d5a87]"
+                 onClick={handleEditCampaign}
+                 disabled={isCreatingCampaign}
+               >
+                 {isCreatingCampaign ? 'Enregistrement...' : 'Enregistrer'}
                </button>
             </div>
           </div>

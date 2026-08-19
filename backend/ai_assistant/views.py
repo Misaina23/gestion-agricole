@@ -564,16 +564,43 @@ class AgriculturalAdviceView(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def daily_tip(self, request):
         tips = [
-            "Surveillez vos plants chaque matin pour detecter les premiers signes de maladie.",
-            "Maintenez une distance de 2m entre chaque pied de vanille pour une bonne ventilation.",
-            "La taille reguliere favorise la floraison et augmente le rendement.",
-            "Privilegiez l'engrais organique pour une agriculture durable.",
-            "Installez des tuteurs solides avant la saison des cyclones.",
+            {
+                'id': 1,
+                'title': 'Surveillance matinale',
+                'content': "Surveillez vos plants chaque matin pour detecter les premiers signes de maladie.",
+                'category': 'general',
+                'priority': 'medium',
+            },
+            {
+                'id': 2,
+                'title': 'Espacement des plants',
+                'content': "Maintenez une distance de 2m entre chaque pied de vanille pour une bonne ventilation.",
+                'category': 'planting',
+                'priority': 'medium',
+            },
+            {
+                'id': 3,
+                'title': 'Taille reguliere',
+                'content': "La taille reguliere favorise la floraison et augmente le rendement.",
+                'category': 'maintenance',
+                'priority': 'low',
+            },
+            {
+                'id': 4,
+                'title': 'Engrais organique',
+                'content': "Privilegiez l'engrais organique pour une agriculture durable.",
+                'category': 'fertilizer',
+                'priority': 'medium',
+            },
+            {
+                'id': 5,
+                'title': 'Tuteurs solides',
+                'content': "Installez des tuteurs solides avant la saison des cyclones.",
+                'category': 'general',
+                'priority': 'high',
+            },
         ]
-        return Response({
-            'tip': random.choice(tips),
-            'date': timezone.now().date().isoformat(),
-        })
+        return Response(tips)
 
     @action(detail=False, methods=['post'])
     def ask(self, request):

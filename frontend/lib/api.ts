@@ -591,9 +591,18 @@ export const aiApi = {
   },
   
   generateMonthlyReport: (month?: string, year?: number) => {
-    const body: Record<string, any> = { report_type: 'global' }
-    if (month) body.period_start = month
-    if (year) body.period_start = `${year}-${month || '01'}-01`
+    const now = new Date()
+    const y = year || now.getFullYear()
+    const parsedMonth = month ? parseInt(month, 10) : null
+    const m = Number.isFinite(parsedMonth) ? parsedMonth : now.getMonth() + 1
+    const period_start = `${y}-${String(m).padStart(2, '0')}-01`
+    const lastDay = new Date(y, m + 1, 0).getDate()
+    const period_end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const body: Record<string, any> = {
+      report_type: 'global',
+      period_start,
+      period_end,
+    }
     return apiFetch<MonthlyReport>('/ai/reports/generate_report/', {
       method: 'POST',
       body: JSON.stringify(body),
