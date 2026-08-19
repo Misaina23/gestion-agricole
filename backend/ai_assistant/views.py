@@ -453,7 +453,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
         title += f" ({start} au {end})"
         return title
 
-    def _build_report_data(self, report_type, start, end, region, include_charts, include_recs, user):
+    def _build_report_data(self, report_type, start, end, region, include_charts, include_recommendations, user):
         from producers.models import Producer
         from parcels.models import Parcel
         from productions.models import Production

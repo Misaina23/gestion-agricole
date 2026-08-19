@@ -13,6 +13,7 @@ router.register(r'cooperatives', CooperativeViewSet, basename='cooperative')
 urlpatterns = [
     path('', include(router.urls)),
     path('export/', ProducerViewSet.as_view({'get': 'export'})),
+    path('<int:pk>/activate/', ProducerViewSet.as_view({'post': 'activate'}), name='producer-activate'),
     path('mobile/pending/', MobileProducerViewSet.as_view({'get': 'pending'})),
     path('mobile/sync/', MobileProducerViewSet.as_view({'post': 'sync'})),
 ]
