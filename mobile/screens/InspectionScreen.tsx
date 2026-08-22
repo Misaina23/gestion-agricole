@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator,
@@ -6,18 +6,19 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
-import { addPendingRecord, initDB, getPendingRecords } from '../lib/db';
-import { request } from '../lib/api-client';
+import { useNotification } from '../contexts/NotificationContext';
+import { addPendingRecord, initDB } from '../lib/db';
+import ThemedDatePicker from '../components/ThemedDatePicker';
 
 interface InspectionData {
-  codeProducteur: string; nomProducteur: string; codeUniqueParcelle: string;
+  nomProducteur: string;
   dateInspection: string; observations: string; conformite: string;
   actionsCorrectives: string; gpsInspection: string; inspecteur: string;
   region?: string; commune?: string; district?: string;
 }
 
 const initialForm: InspectionData = {
-  codeProducteur: '', nomProducteur: '', codeUniqueParcelle: '',
+  nomProducteur: '',
   dateInspection: new Date().toLocaleDateString('fr-FR'),
   observations: '', conformite: '', actionsCorrectives: '',
   gpsInspection: '', inspecteur: '',
@@ -25,96 +26,13 @@ const initialForm: InspectionData = {
 
 export default function InspectionScreen({ navigation, route }: any) {
   const { theme } = useTheme();
+  const { alert } = useNotification();
   const [form, setForm] = useState<InspectionData>(initialForm);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [loadingProducer, setLoadingProducer] = useState(false);
-  const codeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     initDB();
-    if (route?.params?.prefillProducer) {
-      setForm(prev => ({ ...prev, codeProducteur: route.params.prefillProducer }));
-      lookupProducer(route.params.prefillProducer);
-    }
-  }, [route?.params]);
-
-  const lookupProducer = async (code: string) => {
-    if (!code || code.trim().length < 2) {
-      setForm(prev => ({ ...prev, nomProducteur: '', region: '', commune: '', district: '' }));
-      return;
-    }
-
-    const trimmed = code.trim();
-    const local = lookupProducerLocal(trimmed);
-    if (local) {
-      setForm(prev => ({
-        ...prev,
-        nomProducteur: local.name || prev.nomProducteur,
-        region: local.region || prev.region,
-        commune: local.commune || prev.commune,
-        district: local.district || prev.district,
-      }));
-      return;
-    }
-
-    setLoadingProducer(true);
-    try {
-      const data = await request<any>(`/api/producers/?search=${encodeURIComponent(trimmed)}&page_size=1`);
-      const producer = Array.isArray(data?.results) ? data.results[0] : data?.[0];
-      if (producer) {
-        setForm(prev => ({
-          ...prev,
-          nomProducteur: producer.name || prev.nomProducteur,
-          region: producer.region_name || producer.region || prev.region,
-          commune: producer.commune_name || producer.commune || prev.commune,
-          district: producer.district_name || producer.district || prev.district,
-        }));
-      }
-    } catch {
-      // silent on lookup failure
-    } finally {
-      setLoadingProducer(false);
-    }
-  };
-
-  const lookupProducerLocal = (code: string): { name?: string; region?: string; commune?: string; district?: string } | null => {
-    try {
-      const records = getPendingRecords();
-      const lowered = code.toLowerCase();
-      for (const record of records) {
-        try {
-          const data = JSON.parse(record.data);
-          const candidate = (data.codeProducteur || data.code_producteur || '').toLowerCase();
-          const name = data.nomProducteur || data.nom_producteur || data.name || '';
-          if (candidate && lowered.includes(candidate) && name) {
-            return {
-              name,
-              region: data.region || data.region_name || '',
-              commune: data.commune || data.commune_name || '',
-              district: data.district || data.district_name || '',
-            };
-          }
-        } catch {
-          // skip invalid local record
-        }
-      }
-    } catch {
-      // ignore storage errors
-    }
-    return null;
-  };
-
-  const handleCodeChange = (value: string) => {
-    updateField('codeProducteur', value);
-    if (codeTimeoutRef.current) clearTimeout(codeTimeoutRef.current);
-    codeTimeoutRef.current = setTimeout(() => lookupProducer(value), 400);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (codeTimeoutRef.current) clearTimeout(codeTimeoutRef.current);
-    };
   }, []);
 
   const updateField = (key: keyof InspectionData, value: string) => {
@@ -156,10 +74,10 @@ export default function InspectionScreen({ navigation, route }: any) {
         data: JSON.stringify(record),
         createdAt: new Date().toISOString(),
       });
-      Alert.alert('✅ Succès', 'Inspection enregistrée');
+      alert('✅ Succès', 'Inspection enregistrée', 'success');
       navigation.goBack();
     } catch {
-      Alert.alert('Erreur', "Échec de l'enregistrement");
+      alert('Erreur', "Échec de l'enregistrement", 'error');
     } finally {
       setSaving(false);
     }
@@ -174,20 +92,6 @@ export default function InspectionScreen({ navigation, route }: any) {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
       <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Code producteur *</Text>
-        <View style={styles.inputRow}>
-          <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
-            value={form.codeProducteur}
-            onChangeText={handleCodeChange}
-            placeholderTextColor={theme.textMuted}
-            placeholder="Code producteur"
-            autoCapitalize="characters"
-          />
-          {loadingProducer && <ActivityIndicator color={theme.primary} style={styles.inlineLoader} />}
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Nom du producteur *</Text>
         <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
           value={form.nomProducteur}
@@ -197,19 +101,11 @@ export default function InspectionScreen({ navigation, route }: any) {
         />
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Code unique parcelle</Text>
-        <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.codeUniqueParcelle} onChangeText={(v) => updateField('codeUniqueParcelle', v)}
-          placeholderTextColor={theme.textMuted} placeholder="Code parcelle" />
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Date d'inspection</Text>
-        <TextInput style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.dateInspection} onChangeText={(v) => updateField('dateInspection', v)}
-          placeholderTextColor={theme.textMuted} placeholder="JJ/MM/AAAA" />
-      </View>
+      <ThemedDatePicker
+        label="Date d'inspection"
+        value={form.dateInspection}
+        onDateChange={(v) => updateField('dateInspection', v)}
+      />
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.label, { color: theme.textSecondary }]}>Conformité</Text>

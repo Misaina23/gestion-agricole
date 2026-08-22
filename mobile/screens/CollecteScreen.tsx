@@ -6,7 +6,9 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { addPendingRecord, initDB } from '../lib/db';
+import ThemedDatePicker from '../components/ThemedDatePicker';
 
 interface FormData {
   nomSite: string; nomPrenom: string; codeProducteur: string; telephone: string;
@@ -29,6 +31,7 @@ const initialForm: FormData = {
 
 export default function CollecteScreen({ navigation, route }: any) {
   const { theme } = useTheme();
+  const { alert } = useNotification();
   const [form, setForm] = useState<FormData>(initialForm);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,10 +116,10 @@ export default function CollecteScreen({ navigation, route }: any) {
         data: JSON.stringify(record),
         createdAt: new Date().toISOString(),
       });
-      Alert.alert('Succès', 'Données enregistrées localement');
+      alert('Succès', 'Données enregistrées localement', 'success');
       setForm(initialForm);
     } catch {
-      Alert.alert('Erreur', "Échec de l'enregistrement");
+      alert('Erreur', "Échec de l'enregistrement", 'error');
     } finally {
       setSaving(false);
     }
@@ -184,13 +187,15 @@ export default function CollecteScreen({ navigation, route }: any) {
         <SectionHeader icon="👤" title="Informations Producteur" />
         {renderInput('Nom du site *', 'nomSite')}
         {renderInput('Nom et prénom *', 'nomPrenom')}
-        {renderInput("Code producteur (généré automatiquement)", 'codeProducteur')}
         {renderInput('Téléphone', 'telephone', { keyboard: 'phone-pad' })}
-        {renderInput("Date d'intégration", 'dateIntegration', { placeholder: 'JJ/MM/AAAA' })}
+        <ThemedDatePicker
+          label="Date d'intégration"
+          value={form.dateIntegration}
+          onDateChange={(v) => updateField('dateIntegration', v)}
+        />
 
         <SectionHeader icon="🌱" title="Parcelle" />
         {renderInput('Superficie (ha)', 'superficie', { keyboard: 'numeric' })}
-        {renderInput('Code unique parcelle', 'codeUniqueParcelle')}
         {renderInput('Culture', 'culture')}
         {renderInput('Interculture', 'interculture')}
         {renderInput("Nombre d'arbres", 'nombreArbres', { keyboard: 'numeric' })}
@@ -211,7 +216,11 @@ export default function CollecteScreen({ navigation, route }: any) {
         {renderInput('Quantité livrée', 'quantiteLivree', { keyboard: 'numeric' })}
 
         <SectionHeader icon="🔍" title="Inspection" />
-        {renderInput('Date dernière inspection', 'dateDerniereInspection', { placeholder: 'JJ/MM/AAAA' })}
+        <ThemedDatePicker
+          label="Date dernière inspection"
+          value={form.dateDerniereInspection}
+          onDateChange={(v) => updateField('dateDerniereInspection', v)}
+        />
         {renderInput('Nom du CI', 'nomCI')}
 
         <TouchableOpacity

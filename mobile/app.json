@@ -62,7 +62,8 @@
       ],
       "expo-secure-store",
       "expo-sqlite",
-      "./plugins/withRemoveEnableBundleCompression.js"
+      "./plugins/withRemoveEnableBundleCompression.js",
+      "@react-native-community/datetimepicker"
     ],
     "owner": "misaina23"
   }
