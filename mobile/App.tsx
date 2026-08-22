@@ -6,7 +6,8 @@ import { StatusBar } from 'react-native';
 import { useAutoSync } from './hooks/use-auto-sync';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './lib/sync-service';
-import NotificationBanner from './components/NotificationBanner';
+import { NotificationProvider, useNotification } from './contexts/NotificationContext';
+import SweetAlert from './components/SweetAlert';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -30,29 +31,15 @@ function RootNavigator() {
   const { theme, isDark } = useTheme();
   const { isAuthenticated, loading } = useAuth();
   const { isOnline, syncStatus, pendingCount, triggerSync } = useAutoSync();
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('success');
-  const [errorShown, setErrorShown] = useState(false);
+  const { alert } = useNotification();
 
   useEffect(() => {
     if (syncStatus === 'success' && pendingCount > 0) {
-      setNotificationType('success');
-      setShowNotification(true);
-      setErrorShown(false);
-      setTimeout(() => setShowNotification(false), 3000);
-    } else if (syncStatus === 'error' && !errorShown) {
-      setNotificationType('error');
-      setShowNotification(true);
-      setErrorShown(true);
-      setTimeout(() => setShowNotification(false), 4000);
+      alert('Synchronisation réussie', `${pendingCount} enregistrement(s) synchronisé(s)`, 'success');
+    } else if (syncStatus === 'error') {
+      alert('Échec de synchronisation', 'Vérifiez votre connexion', 'error');
     }
-  }, [syncStatus]);
-
-  useEffect(() => {
-    if (syncStatus !== 'error') {
-      setErrorShown(false);
-    }
-  }, [syncStatus]);
+  }, [syncStatus, pendingCount, alert]);
 
   const navTheme = isDark
     ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: theme.bg, card: theme.surface, text: theme.text, primary: theme.primary, border: theme.border } }
@@ -64,6 +51,7 @@ function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
@@ -117,11 +105,7 @@ function RootNavigator() {
         )}
       </Stack.Navigator>
 
-      <NotificationBanner
-        visible={showNotification}
-        message={syncStatus === 'success' ? 'Synchronisation réussie' : 'Échec de synchronisation'}
-        type={notificationType}
-      />
+      <SweetAlert />
     </NavigationContainer>
   );
 }
@@ -130,7 +114,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootNavigator />
+        <NotificationProvider>
+          <RootNavigator />
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

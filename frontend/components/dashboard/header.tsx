@@ -1,6 +1,6 @@
 "use client"
 
-import { MoonStar, SunMedium, Bell, Menu } from "lucide-react"
+import { MoonStar, SunMedium, LogOut, Menu } from "lucide-react"
 import { useTheme } from "next-themes"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,7 @@ interface HeaderProps {
   activeTab: string
   onTabChange: (tab: string) => void
   user?: User | null
+  onLogout?: () => void
   onNavigate?: (item: string) => void
 }
 
@@ -82,11 +83,6 @@ export function Header({ activeTab, onTabChange, user, onLogout, onNavigate }: H
             {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative text-white/80 hover:bg-white/10 hover:text-white">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
@@ -102,7 +98,7 @@ export function Header({ activeTab, onTabChange, user, onLogout, onNavigate }: H
             <DropdownMenuContent align="end" className="w-48">
               <div className="px-2 py-2">
                 <p className="text-sm font-medium">{user?.full_name || user?.username}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
               <DropdownMenuSeparator />
               {user && systemMenuItems.filter(item => item.roles.includes(user.role || '')).map((item) => (
@@ -114,6 +110,15 @@ export function Header({ activeTab, onTabChange, user, onLogout, onNavigate }: H
                   {t(item.labelKey as any)}
                 </DropdownMenuItem>
               ))}
+              {onLogout && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Déconnexion
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

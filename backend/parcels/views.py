@@ -9,6 +9,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Count, Sum, Avg
 from django.http import HttpResponse
 from django.conf import settings
+from datetime import date
 import qrcode
 import io
 
@@ -138,6 +139,17 @@ class ParcelViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['post'])
+    def verify(self, request, pk=None):
+        """Mark parcel as verified"""
+        parcel = self.get_object()
+        parcel.is_certified = True
+        parcel.certification_date = date.today()
+        parcel.status = 'active'
+        parcel.save()
+        serializer = ParcelDetailSerializer(parcel)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def map_data(self, request):

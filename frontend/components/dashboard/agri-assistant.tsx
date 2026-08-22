@@ -429,18 +429,26 @@ export default function AgriAssistantPanel() {
       {monthlyReport && (
         <Card className="border-border/70 bg-card/95 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-foreground">{t("reportSummary")} - {monthlyReport.month} {monthlyReport.year}</CardTitle>
+            <CardTitle className="text-foreground">
+              {t("reportSummary")} - {monthlyReport.month ?? '-'} {monthlyReport.year ?? '-'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-3 text-sm text-foreground">{monthlyReport.summary}</p>
-            <p className="mb-3 text-[10px] uppercase tracking-wide text-muted-foreground">{t("generatedOn")} {new Date(monthlyReport.created_at).toLocaleString(locale === "fr" ? "fr-FR" : "en-US")}</p>
+            <p className="mb-3 text-sm text-foreground">{monthlyReport.summary || ''}</p>
+            <p className="mb-3 text-[10px] uppercase tracking-wide text-muted-foreground">
+              {t("generatedOn")} {monthlyReport.created_at ? new Date(monthlyReport.created_at).toLocaleString(locale === "fr" ? "fr-FR" : "en-US") : '-'}
+            </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              {Object.entries(monthlyReport.yield_data).map(([key, value]) => (
-                <div key={key} className="rounded-2xl border border-border/60 bg-muted/50 p-2.5">
-                  <span className="text-muted-foreground">{key}</span>
-                  <p className="mt-1 font-semibold text-foreground">{value}</p>
-                </div>
-              ))}
+              {(monthlyReport.yield_data && Object.keys(monthlyReport.yield_data).length > 0) ? (
+                Object.entries(monthlyReport.yield_data).map(([key, value]) => (
+                  <div key={key} className="rounded-2xl border border-border/60 bg-muted/50 p-2.5">
+                    <span className="text-muted-foreground">{key}</span>
+                    <p className="mt-1 font-semibold text-foreground">{value}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="col-span-2 text-xs text-muted-foreground">{t("noData")}</p>
+              )}
             </div>
           </CardContent>
         </Card>

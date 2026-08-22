@@ -1,15 +1,17 @@
 ﻿import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Image,
-  StyleSheet, Alert, KeyboardAvoidingView, Platform,
+  StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../lib/sync-service';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function LoginScreen({ navigation }: any) {
   const { theme, isDark, toggleTheme } = useTheme();
   const { login } = useAuth();
+  const { alert } = useNotification();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,17 +19,19 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      alert('Champs manquants', 'Veuillez remplir tous les champs', 'warning');
       return;
     }
     setLoading(true);
     try {
       const result = await login(email, password);
       if (!result.success) {
-        Alert.alert('Erreur', result.error || 'Identifiants incorrects');
+        alert('Erreur', result.error || 'Identifiants incorrects', 'error');
+      } else {
+        alert('Connexion réussie', 'Bienvenue sur VIDEEKO VANILLA', 'success');
       }
     } catch {
-      Alert.alert('Erreur', 'Connexion échouée');
+      alert('Erreur', 'Connexion échouée', 'error');
     } finally {
       setLoading(false);
     }

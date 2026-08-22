@@ -169,6 +169,7 @@ function DashboardContent() {
         activeTab={activeTab} 
         onTabChange={navigateDashboard}
         user={user}
+        onLogout={logout}
         onNavigate={(item: string) => navigateDashboard(item)}
       />
 

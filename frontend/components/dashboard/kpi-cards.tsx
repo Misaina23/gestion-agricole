@@ -37,8 +37,8 @@ export function KPICards() {
     {
       label: t("parcelsGps").toUpperCase(),
       value: stats?.parcels?.total?.toLocaleString() || "0",
-      trend: stats?.parcels?.active ? `${stats.parcels.active}` : "0",
-      trendLabel: t("activeParcels"),
+      trend: stats?.parcels?.certified?.toString() || "0",
+      trendLabel: "Certifiées",
       isUp: true,
       icon: Map,
       gradient: "from-[#87ceeb] to-[#4a90c2]",
@@ -46,9 +46,9 @@ export function KPICards() {
     },
     {
       label: t("surface").toUpperCase(),
-      value: stats?.parcels?.total_surface?.toLocaleString() || "0",
+      value: stats?.parcels?.total_area?.toLocaleString() || "0",
       unit: "ha",
-      trend: `${stats?.parcels?.total_vanilla_trees?.toLocaleString() || 0}`,
+      trend: `${stats?.parcels?.total_plants?.toLocaleString() || 0}`,
       trendLabel: t("vanillaTrees"),
       isUp: true,
       icon: Leaf,

@@ -50,9 +50,7 @@ export interface Parcel {
   producer: number
   producer_name?: string
   producer_code?: string
-  region: string
   region_name?: string
-  commune: string
   commune_name?: string
   fokontany?: string
   area: number
@@ -123,11 +121,27 @@ export interface DashboardStats {
   }
   parcels?: {
     total: number
-    verified: number
-    pending: number
-    rejected: number
-    total_surface: number
-    total_vanilla_trees: number
+    total_area: number
+    total_plants: number
+    total_productive: number
+    avg_area: number
+    avg_plants_per_parcel: number
+    certified: number
+    by_status: Record<string, number>
+    by_region: Array<{
+      producer__region__name: string
+      count: number
+      total_area: number
+      total_plants: number
+    }>
+    by_variety: Array<{
+      variety__name: string
+      count: number
+    }>
+    by_soil_type: Array<{
+      soil_type: string
+      count: number
+    }>
   }
   productions?: {
     total: number

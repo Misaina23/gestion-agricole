@@ -45,15 +45,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useParcels, invalidateParcels, useRegions } from "@/lib/hooks"
+import { useParcels, invalidateParcels, useRegions, useProducers } from "@/lib/hooks"
 import { parcelsApi, type Parcel } from "@/lib/api"
 import { toast } from "sonner"
 import { confirmDelete, successAlert, errorAlert } from "@/lib/sweetalert"
 
 const statusConfig: Record<string, { label: string; class: string }> = {
-  verified: { label: "Vérifiée", class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  pending: { label: "En attente", class: "bg-amber-100 text-amber-700 border-amber-200" },
-  rejected: { label: "Rejetée", class: "bg-red-100 text-red-700 border-red-200" },
+  active: { label: "Actif", class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  inactive: { label: "Inactif", class: "bg-gray-100 text-gray-700 border-gray-200" },
+  fallow: { label: "En jachère", class: "bg-amber-100 text-amber-700 border-amber-200" },
+  new: { label: "Nouveau", class: "bg-sky-100 text-sky-700 border-sky-200" },
 }
 
 export function ParcelsPage() {
@@ -70,8 +71,6 @@ export function ParcelsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     producer: "",
-    region: "",
-    commune: "",
     area: "",
     vanilla_plants: "",
     tutor_trees: "",
@@ -86,6 +85,7 @@ export function ParcelsPage() {
   params.page = currentPage.toString()
 
   const { regions } = useRegions()
+  const { producers: producersList } = useProducers({ page_size: "1000" })
   const { parcels, total, isLoading, error, refresh } = useParcels(params)
   const totalPages = Math.max(1, Math.ceil((total || 0) / 4))
 
@@ -100,7 +100,7 @@ export function ParcelsPage() {
 
   const totalSurface = parcels.reduce((acc, p) => acc + toNumber(p.area), 0)
   const totalVanillaTrees = parcels.reduce((acc, p) => acc + toNumber(p.vanilla_plants), 0)
-  const verifiedCount = parcels.filter(p => p.status === "verified" || p.status === "active").length
+  const verifiedCount = parcels.filter(p => p.status === "active").length
 
   const handleExportExcel = async () => {
     setIsExporting(true)
@@ -130,18 +130,16 @@ export function ParcelsPage() {
     setIsSubmitting(true)
     try {
       await parcelsApi.create({
-        producer: formData.producer,
-        region: formData.region,
-        commune: formData.commune,
+        producer: Number(formData.producer),
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,
         tutor_trees: parseInt(formData.tutor_trees) || 0,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        status: "pending",
+        status: "new",
       })
       toast.success("Parcelle ajoutée avec succès")
-      setFormData({ producer: "", region: "", commune: "", area: "", vanilla_plants: "", tutor_trees: "", latitude: "", longitude: "" })
+      setFormData({ producer: "", area: "", vanilla_plants: "", tutor_trees: "", latitude: "", longitude: "" })
       setIsAddDialogOpen(false)
       invalidateParcels()
       refresh()
@@ -157,8 +155,6 @@ export function ParcelsPage() {
     setIsSubmitting(true)
     try {
       await parcelsApi.update(selectedParcel.id, {
-        region: formData.region,
-        commune: formData.commune,
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,
         tutor_trees: parseInt(formData.tutor_trees) || 0,
@@ -198,8 +194,6 @@ export function ParcelsPage() {
     setSelectedParcel(parcel)
     setFormData({
       producer: parcel.producer?.toString() || "",
-      region: parcel.region,
-      commune: parcel.commune,
       area: parcel.area?.toString() || "",
       vanilla_plants: parcel.vanilla_plants?.toString() || "",
       tutor_trees: parcel.tutor_trees?.toString() || "",
@@ -303,9 +297,10 @@ export function ParcelsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous statuts</SelectItem>
-                <SelectItem value="verified">Vérifiée</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="rejected">Rejetée</SelectItem>
+                <SelectItem value="active">Actif</SelectItem>
+                <SelectItem value="inactive">Inactif</SelectItem>
+                <SelectItem value="fallow">En jachère</SelectItem>
+                <SelectItem value="new">Nouveau</SelectItem>
               </SelectContent>
             </Select>
             <Select value={regionFilter} onValueChange={setRegionFilter}>
@@ -363,7 +358,7 @@ export function ParcelsPage() {
                         <p className="text-xs text-[#5a7a9a] font-mono">{parcel.producer_code || '-'}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#5a7a9a]">{parcel.commune_name || parcel.commune}</TableCell>
+                     <TableCell className="text-[#5a7a9a]">{parcel.commune_name || '-'}</TableCell>
                     <TableCell className="text-center font-semibold text-[#1e3a5f]">{toNumber(parcel.area).toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex items-center justify-center px-2 py-1 rounded-full bg-[#e8f4fc] text-[#1e3a5f] font-semibold text-sm">
@@ -450,41 +445,21 @@ export function ParcelsPage() {
             <DialogDescription>Enregistrez une nouvelle parcelle GPS</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Code Producteur</label>
-              <Input
-                value={formData.producer}
-                onChange={(e) => setFormData({ ...formData, producer: e.target.value })}
-                placeholder="Ex: VV-2024-0341"
-                className="border-[#c5ddf5]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Région</label>
-                <Select value={formData.region} onValueChange={(v) => setFormData({ ...formData, region: v })}>
-                  <SelectTrigger className="border-[#c5ddf5]">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {regions.map((region) => (
-                      <SelectItem key={region.id} value={region.id.toString()}>
-                        {region.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Commune</label>
-                <Input
-                  value={formData.commune}
-                  onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
-                  placeholder="Ex: Sambava"
-                  className="border-[#c5ddf5]"
-                />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#0a1628]">Producteur</label>
+            <Select value={formData.producer} onValueChange={(v) => setFormData({ ...formData, producer: v })}>
+              <SelectTrigger className="border-[#c5ddf5]">
+                <SelectValue placeholder="Sélectionner un producteur" />
+              </SelectTrigger>
+              <SelectContent>
+                {producersList.map((producer) => (
+                  <SelectItem key={producer.id} value={producer.id.toString()}>
+                    {producer.code} - {producer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[#0a1628]">Surface (ha)</label>
@@ -560,31 +535,6 @@ export function ParcelsPage() {
             <DialogDescription>Modifiez les informations de la parcelle</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Région</label>
-                <Select value={formData.region} onValueChange={(v) => setFormData({ ...formData, region: v })}>
-                  <SelectTrigger className="border-[#c5ddf5]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {regions.map((region) => (
-                      <SelectItem key={region.id} value={region.id.toString()}>
-                        {region.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Commune</label>
-                <Input
-                  value={formData.commune}
-                  onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
-                  className="border-[#c5ddf5]"
-                />
-              </div>
-            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[#0a1628]">Surface (ha)</label>
@@ -665,14 +615,14 @@ export function ParcelsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><MapPin className="w-3 h-3" /> Région</p>
-                  <p className="font-medium text-[#0a1628]">{selectedParcel.region_name || selectedParcel.region}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Commune</p>
-                  <p className="font-medium text-[#0a1628]">{selectedParcel.commune_name || selectedParcel.commune}</p>
-                </div>
+                 <div className="space-y-1">
+                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><MapPin className="w-3 h-3" /> Région</p>
+                   <p className="font-medium text-[#0a1628]">{selectedParcel.region_name || '-'}</p>
+                 </div>
+                 <div className="space-y-1">
+                   <p className="text-xs text-[#5a7a9a]">Commune</p>
+                   <p className="font-medium text-[#0a1628]">{selectedParcel.commune_name || '-'}</p>
+                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Maximize2 className="w-3 h-3" /> Surface</p>
                   <p className="font-medium text-[#0a1628]">{(selectedParcel.area || 0).toFixed(2)} ha</p>

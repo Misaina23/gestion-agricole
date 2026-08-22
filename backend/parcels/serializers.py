@@ -75,7 +75,8 @@ class ParcelCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'code', 'name', 'producer',
             'latitude', 'longitude', 'altitude', 'gps_accuracy', 'polygon_coordinates',
-            'area', 'vanilla_plants', 'productive_plants', 'variety',
+            'area', 'vanilla_plants', 'productive_plants', 'tutor_trees',
+            'variety',
             'soil_type', 'shade_percentage', 'irrigation',
             'planting_date', 'first_harvest_date',
             'status', 'is_certified', 'certification_date',

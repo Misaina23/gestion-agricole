@@ -1,10 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../lib/sync-service';
+import { useNotification } from '../contexts/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { initDB, getPendingRecords, markSynced, clearSynced, API_URL, addSyncLog, normalizeApiUrl } from '../lib/db';
@@ -34,21 +35,38 @@ const ActionCard = ({ icon, title, subtitle, onPress, theme }: any) => (
 export default function DashboardScreen({ navigation }: any) {
   const { logout } = useAuth();
   const { theme, isDark, toggleTheme } = useTheme();
+  const { alert, confirm } = useNotification();
   const insets = useSafeAreaInsets();
   const [pendingCount, setPendingCount] = useState(0);
   const [syncedCount, setSyncedCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [wasOffline, setWasOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+
+  const getInitials = (email: string): string => {
+    if (!email) return '?';
+    const local = email.split('@')[0];
+    const parts = local.split(/[._-]/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return local.substring(0, 2).toUpperCase();
+  };
 
   useEffect(() => {
     initDB();
     const unsubscribe = NetInfo.addEventListener(state => {
-      setIsOnline(state.isConnected ?? false);
+      const connected = state.isConnected ?? false;
+      setIsOnline(connected);
+      if (connected && wasOffline) {
+        alert('Connexion rétablie', 'Vous êtes de nouveau en ligne', 'success');
+      }
+      setWasOffline(!connected);
     });
     loadData();
     return () => unsubscribe();
-  }, []);
+  }, [wasOffline, alert]);
 
   const loadData = async () => {
     const records = getPendingRecords();
@@ -59,18 +77,18 @@ export default function DashboardScreen({ navigation }: any) {
 
   const getEndpoint = (type: string): string => {
     switch (type) {
-    case 'collecte': return '/api/mobile/collectes/sync/';
-    case 'inspection': return '/api/mobile/field-inspections/sync/';
-    case 'parcel': return '/api/mobile/parcels/sync/';
-    case 'production': return '/api/mobile/productions/sync/';
-    case 'cin_scan': return '/api/cin/scans/sync/';
-    default: return '/api/mobile/collectes/sync/';
+      case 'collecte': return '/api/mobile/collectes/sync/';
+      case 'inspection': return '/api/mobile/field-inspections/sync/';
+      case 'parcel': return '/api/mobile/parcels/sync/';
+      case 'production': return '/api/mobile/productions/sync/';
+      case 'cin_scan': return '/api/cin/scans/sync/';
+      default: return '/api/mobile/collectes/sync/';
     }
   };
 
   const syncData = async () => {
     if (!isOnline) {
-      Alert.alert('Hors ligne', 'Connexion internet requise pour synchroniser');
+      alert('Hors ligne', 'Connexion internet requise pour synchroniser', 'warning');
       return;
     }
     setSyncing(true);
@@ -120,30 +138,46 @@ export default function DashboardScreen({ navigation }: any) {
       }
       setSyncedCount(prev => prev + successCount);
       setPendingCount(prev => Math.max(prev - successCount, 0));
-      Alert.alert('Synchronisation', `${successCount} succès, ${failCount} échecs`);
+      if (successCount > 0 && failCount === 0) {
+        alert('Synchronisation réussie', `${successCount} enregistrement(s) synchronisé(s)`, 'success');
+      } else if (successCount > 0 && failCount > 0) {
+        alert('Synchronisation partielle', `${successCount} succès, ${failCount} échecs`, 'warning');
+      } else {
+        alert('Échec de synchronisation', `${failCount} enregistrement(s) ont échoué`, 'error');
+      }
     } catch (error: any) {
-      Alert.alert('Erreur', error?.message || 'Échec de la synchronisation');
+      alert('Erreur', error?.message || 'Échec de la synchronisation', 'error');
     } finally {
       setSyncing(false);
     }
   };
 
   const handleLogout = async () => {
-    await logout();
+    confirm(
+      'Déconnexion',
+      'Voulez-vous vraiment vous déconnecter ?',
+      async () => {
+        await logout();
+      },
+      () => {},
+      'Déconnexion',
+      'Annuler'
+    );
   };
 
-  const displayEmail = userEmail || 'Utilisateur';
-
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+      >
       <View style={styles.headerRow}>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerEmail, { color: theme.textSecondary }]} numberOfLines={1}>
-            {displayEmail}
-          </Text>
+          <View style={[styles.initialsBadge, { backgroundColor: theme.navyMuted }]}>
+            <Text style={[styles.initialsText, { color: theme.navy }]}>
+              {getInitials(userEmail)}
+            </Text>
+          </View>
           <View style={[styles.statusPill, { backgroundColor: isOnline ? theme.successBg : theme.errorBg }]}>
             <View style={[styles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
             <Text style={[styles.statusText, { color: isOnline ? theme.success : theme.error }]}>
@@ -212,7 +246,8 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         )}
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -220,7 +255,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   headerCenter: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 },
-  headerEmail: { fontSize: 13, fontWeight: '500', marginRight: 10 },
+  initialsBadge: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  initialsText: { fontSize: 15, fontWeight: '700' },
   headerActions: { flexDirection: 'row', gap: 10 },
   iconBtn: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
   statusPill: {
