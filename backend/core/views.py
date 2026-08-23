@@ -10,6 +10,11 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from django.core.management import call_command
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from io import StringIO
+import os
 from datetime import timedelta, date
 
 from .models import Region, Commune, District, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog
@@ -147,6 +152,7 @@ def dashboard_stats(request):
     """Get dashboard statistics"""
     from producers.models import Producer
     from parcels.models import Parcel
+    from parcels.models import ParcelRegisterHarvest
     from productions.models import Production
     from inspections.models import Inspection
     from accounts.models import User
@@ -196,6 +202,24 @@ def dashboard_stats(request):
         'new': parcel_agg['new'],
         'total_surface': float(parcel_agg['total_surface'] or 0),
         'total_vanilla_trees': parcel_agg['total_vanilla_trees'] or 0,
+        'by_conversion_status': {
+            row['conversion_status']: {'count': row['count'], 'area': float(row['area'] or 0)}
+            for row in parcels_qs.exclude(conversion_status__isnull=True).values('conversion_status').annotate(count=Count('id'), area=Sum('area'))
+        },
+        'by_conversion_level': {
+            row['conversion_level']: {'count': row['count'], 'area': float(row['area'] or 0)}
+            for row in parcels_qs.exclude(conversion_level__isnull=True).values('conversion_level').annotate(count=Count('id'), area=Sum('area'))
+        },
+    }
+    register_harvest_agg = ParcelRegisterHarvest.objects.filter(period='current').aggregate(
+        estimated_yield=Avg('estimated_yield'), actual_yield=Avg('actual_yield'),
+        actual_harvest=Sum('actual_harvest'), delivered_quantity=Sum('delivered_quantity'),
+    )
+    parcel_stats['register_harvest'] = {
+        'estimated_yield_average': float(register_harvest_agg['estimated_yield'] or 0),
+        'actual_yield_average': float(register_harvest_agg['actual_yield'] or 0),
+        'actual_harvest_total': float(register_harvest_agg['actual_harvest'] or 0),
+        'delivered_quantity_total': float(register_harvest_agg['delivered_quantity'] or 0),
     }
 
     quality_counts = {
@@ -477,6 +501,30 @@ def reference_data(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def import_vintsy_register(request):
+    """Secure, administrator-only import of the cooperative T06 workbook."""
+    if getattr(request.user, 'role', None) != 'admin':
+        return Response({'detail': 'Accès administrateur requis.'}, status=status.HTTP_403_FORBIDDEN)
+    workbook = request.FILES.get('workbook')
+    if not workbook or not workbook.name.lower().endswith('.xlsx'):
+        return Response({'detail': 'Un fichier Excel .xlsx est requis.'}, status=status.HTTP_400_BAD_REQUEST)
+    if workbook.size > 50 * 1024 * 1024:
+        return Response({'detail': 'Le fichier ne doit pas dépasser 50 Mo.'}, status=status.HTTP_400_BAD_REQUEST)
+    name = default_storage.save(f'tmp/imports/{timezone.now():%Y%m%d%H%M%S}_{workbook.name}', ContentFile(workbook.read()))
+    path = default_storage.path(name)
+    output = StringIO()
+    try:
+        call_command('load_vintsy_register_fast', path, stdout=output)
+    except Exception as exc:
+        return Response({'detail': f'Échec de l’import : {exc}'}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+        if default_storage.exists(name):
+            default_storage.delete(name)
+    return Response({'detail': 'Import terminé.', 'result': output.getvalue().strip()})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def parse_qr_code(request):
     """Parse a QR code scanned on mobile and return the relevant data for pre-filling forms"""
     qr_data = request.data.get('qr_data', '')
@@ -639,8 +687,9 @@ def sig_production_zones(request):
         {
             'name': z['producer__region__name'],
             'region': z['producer__region__name'],
-            'center_lat': -18.8792,
-            'center_lng': 47.5079,
+            # A zone aggregate has no source GPS point. Do not fabricate one.
+            'center_lat': None,
+            'center_lng': None,
             'total_surface': float(z['total_surface'] or 0),
             'total_plants': z['total_plants'] or 0,
             'parcels_count': z['parcels_count'] or 0,

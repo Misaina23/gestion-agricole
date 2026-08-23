@@ -33,7 +33,9 @@ interface SidebarProps {
   userName?: string
 }
 
-const navigationItems = [
+type NavigationItem = { icon: typeof LayoutDashboard; labelKey: string; id: string; roles?: string[] }
+
+const navigationItems: NavigationItem[] = [
   { icon: LayoutDashboard, labelKey: "overview", id: "overview" },
   { icon: Users, labelKey: "producers", id: "producers" },
   { icon: Map, labelKey: "parcelsGps", id: "parcels" },
@@ -45,16 +47,16 @@ const navigationItems = [
   { icon: Truck, labelKey: "deliveries", id: "deliveries" },
 ]
 
-const reportItems = [
+const reportItems: NavigationItem[] = [
   { icon: FileSpreadsheet, labelKey: "reports", id: "reports" },
 ]
 
-const intelligenceItems = [
+const intelligenceItems: NavigationItem[] = [
   { icon: Bot, labelKey: "aiAssistant", id: "assistant" },
   { icon: History, labelKey: "history", id: "history" },
 ]
 
-const systemItems = [
+const systemItems: NavigationItem[] = [
   { icon: UsersRound, labelKey: "users", id: "users", roles: ['admin', 'manager'] },
   { icon: Settings, labelKey: "settings", id: "settings", roles: ['admin'] },
 ]

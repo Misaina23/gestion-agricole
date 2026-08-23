@@ -83,6 +83,8 @@ class ProducerDetailSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'is_certified',
             'certification_date', 'certification_number', 'certification_expiry',
             'cooperative', 'cooperative_name', 'photo', 'notes',
+            'joined_at', 'risk_category', 'identified_risks', 'member_processing', 'processing_activities',
+            'last_internal_inspection_at', 'internal_inspector_name', 'last_external_inspection_at', 'eu_status', 'nop_status',
             'registered_by', 'registered_by_name',
             'parcels_count', 'total_area', 'total_plants',
             'created_at', 'updated_at'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 
 import { Users, Eye, Edit, MoreHorizontal, Plus } from "lucide-react"

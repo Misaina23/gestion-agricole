@@ -27,7 +27,7 @@ class ParcelViewSet(viewsets.ModelViewSet):
     """ViewSet for Parcel"""
     queryset = Parcel.objects.select_related(
         'producer', 'producer__region', 'producer__commune', 'variety', 'registered_by'
-    ).all()
+    ).prefetch_related('register_harvests').all()
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [
         'producer', 'producer__region', 'producer__commune',
@@ -86,6 +86,12 @@ class ParcelViewSet(viewsets.ModelViewSet):
         status_counts = dict(
             queryset.values('status').annotate(c=Count('id')).values_list('status', 'c')
         )
+        conversion_counts = dict(queryset.values('conversion_status').annotate(c=Count('id')).values_list('conversion_status', 'c'))
+        conversion_areas = dict(queryset.values('conversion_status').annotate(area=Sum('area')).values_list('conversion_status', 'area'))
+        conversion_levels = {
+            row['conversion_level']: {'count': row['count'], 'area': float(row['area'] or 0)}
+            for row in queryset.exclude(conversion_level__isnull=True).values('conversion_level').annotate(count=Count('id'), area=Sum('area'))
+        }
         stats = {
             'total': queryset.count(),
             'total_area': float(agg['total_area'] or 0),
@@ -95,6 +101,11 @@ class ParcelViewSet(viewsets.ModelViewSet):
             'avg_plants_per_parcel': agg['avg_plants'] or 0,
             'certified': queryset.filter(is_certified=True).count(),
             'by_status': {code: status_counts.get(code, 0) for code, _ in Parcel.STATUS_CHOICES},
+            'by_conversion_status': {
+                code: {'count': conversion_counts.get(code, 0), 'area': float(conversion_areas.get(code) or 0)}
+                for code in ('organic', 'conversion', 'conventional')
+            },
+            'by_conversion_level': conversion_levels,
             'by_region': list(
                 queryset.values('producer__region__name')
                 .annotate(
@@ -160,6 +171,7 @@ class ParcelViewSet(viewsets.ModelViewSet):
         data = queryset.values(
             'id', 'code', 'name', 'latitude', 'longitude',
             'area', 'vanilla_plants', 'status', 'is_certified',
+            'main_crop', 'intercrop', 'conversion_status', 'conversion_level', 'estimated_yield', 'eu_status', 'nop_status',
             'polygon_coordinates',
             'producer__name', 'producer__code',
             'producer__region__name', 'producer__commune__name'
@@ -171,7 +183,29 @@ class ParcelViewSet(viewsets.ModelViewSet):
         """Export parcels data in xlsx, csv, pdf, or json format"""
         queryset = self.filter_queryset(self.get_queryset())
         export_format = request.query_params.get('format', 'xlsx')
-        data = ParcelDetailSerializer(queryset, many=True).data
+        data = []
+        for parcel in queryset:
+            current_main = next(
+                (item for item in parcel.register_harvests.all()
+                 if item.period == 'current' and item.crop_slot == 'main'), None
+            )
+            data.append({
+                'Code producteur': parcel.producer.code,
+                'Producteur': parcel.producer.name,
+                'Code parcelle': parcel.code,
+                'Surface (ha)': float(parcel.area),
+                'Culture principale': parcel.main_crop or '',
+                'Interculture': parcel.intercrop or '',
+                'Statut conversion': parcel.get_conversion_status_display() if parcel.conversion_status else '',
+                'Niveau conversion': parcel.conversion_level or '',
+                'Latitude': float(parcel.latitude) if parcel.latitude is not None else '',
+                'Longitude': float(parcel.longitude) if parcel.longitude is not None else '',
+                'Rendement estimé (kg/ha)': float(current_main.estimated_yield) if current_main and current_main.estimated_yield is not None else '',
+                'Récolte principale (kg)': float(current_main.actual_harvest) if current_main and current_main.actual_harvest is not None else '',
+                'Livré au groupe (kg)': float(current_main.delivered_quantity) if current_main and current_main.delivered_quantity is not None else '',
+                'Statut UE': parcel.eu_status or '',
+                'Statut NOP': parcel.nop_status or '',
+            })
         content_type, content, filename = build_export_response(data, 'parcels', export_format)
         response = Response(content, content_type=content_type)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

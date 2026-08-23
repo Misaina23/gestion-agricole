@@ -152,6 +152,17 @@ class Producer(TimeStampedModel):
         null=True,
         verbose_name='Notes'
     )
+    # Fields supplied by the members register, kept verbatim rather than inferred.
+    joined_at = models.DateField(blank=True, null=True, verbose_name="Date d'intégration")
+    risk_category = models.CharField(max_length=100, blank=True, null=True, verbose_name='Catégorie de risque')
+    identified_risks = models.TextField(blank=True, null=True, verbose_name='Risques identifiés')
+    member_processing = models.CharField(max_length=30, blank=True, null=True, verbose_name='Préparation/transformation')
+    processing_activities = models.TextField(blank=True, null=True, verbose_name='Activités de préparation')
+    last_internal_inspection_at = models.DateField(blank=True, null=True, verbose_name='Dernière inspection interne')
+    internal_inspector_name = models.CharField(max_length=200, blank=True, null=True, verbose_name='Inspecteur SCI')
+    last_external_inspection_at = models.DateField(blank=True, null=True, verbose_name='Dernière inspection externe')
+    eu_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut UE')
+    nop_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut NOP')
     synced = models.BooleanField(default=True, verbose_name='Synchronise')
     
     # Agent who registered

@@ -8,7 +8,7 @@ from .views import (
     VanillaVarietyViewSet, QualityGradeViewSet, SeasonViewSet,
     SyncLogViewSet, dashboard_stats, dashboard_activity,
     dashboard_sync_status, reference_data, parse_qr_code, generate_qr_code,
-    sig_producers_locations, sig_parcels_polygons, sig_production_zones
+    sig_producers_locations, sig_parcels_polygons, sig_production_zones, import_vintsy_register
 )
 from .search_views import global_search
 from .anomaly_views import detect_anomalies
@@ -34,6 +34,7 @@ urlpatterns = [
     path('dashboard/activity/', dashboard_activity, name='dashboard-activity'),
     path('dashboard/sync-status/', dashboard_sync_status, name='dashboard-sync-status'),
     path('reference-data/', reference_data, name='reference-data'),
+    path('imports/vintsy-register/', import_vintsy_register, name='import-vintsy-register'),
     path('search/', global_search, name='global-search'),
     path('anomalies/detect/', detect_anomalies, name='detect-anomalies'),
     path('parse-qr/', parse_qr_code, name='parse-qr'),

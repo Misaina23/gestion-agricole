@@ -88,8 +88,24 @@ export function KPICards() {
     },
   ]
 
+  const conversion = stats?.parcels?.by_conversion_status ?? {}
+
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          ["Biologique", conversion.organic],
+          ["En conversion", conversion.conversion],
+          ["Conventionnelle", conversion.conventional],
+        ].map(([label, data]) => (
+          <div key={label as string} className="rounded-xl border border-[#c5ddf5] bg-card/95 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">{label as string}</p>
+            <p className="mt-1 text-2xl font-bold text-foreground">{(data as { count: number; area: number } | undefined)?.count ?? 0} parcelles</p>
+            <p className="text-sm text-muted-foreground">{(data as { count: number; area: number } | undefined)?.area ?? 0} ha</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {kpiData.map((kpi) => (
         <StatCard
           key={kpi.label}
@@ -100,6 +116,7 @@ export function KPICards() {
           icon={<kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />}
         />
       ))}
-    </div>
+      </div>
+    </>
   )
 }

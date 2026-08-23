@@ -31,6 +31,12 @@ LLM_RATE_LIMIT = int(os.getenv('LLM_RATE_LIMIT', '20'))  # requests
 LLM_RATE_PERIOD = int(os.getenv('LLM_RATE_PERIOD', '60'))  # seconds
 
 
+def visible_producers(user):
+    """Administrators analyse the cooperative register; field users see theirs."""
+    from producers.models import Producer
+    return Producer.objects.all() if getattr(user, 'role', None) in ('admin', 'manager') else Producer.objects.filter(registered_by=user)
+
+
 class ChatSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ChatSessionSerializer
     permission_classes = [IsAuthenticated]
@@ -273,24 +279,20 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
     def _stats_response(self, user) -> dict:
         from producers.models import Producer
         from parcels.models import Parcel
-        from productions.models import Production
+        from parcels.models import ParcelRegisterHarvest
 
-        total_producers = Producer.objects.filter(registered_by=user).count()
-        total_parcels = Parcel.objects.filter(
-            producer__in=Producer.objects.filter(registered_by=user)
-        ).count()
-        total_productions = Production.objects.filter(
-            parcel__producer__in=Producer.objects.filter(registered_by=user)
-        ).count()
+        producers = visible_producers(user)
+        parcels = Parcel.objects.filter(producer__in=producers)
+        harvests = ParcelRegisterHarvest.objects.filter(parcel__in=parcels, period='current')
+        totals = harvests.aggregate(harvested=Sum('actual_harvest'), delivered=Sum('delivered_quantity'))
 
-        report_url = '/api/ai/reports/generate_report/'
         return {
             'response': (
-                f"Vos statistiques : {total_producers} producteurs, "
-                f"{total_parcels} parcelles, {total_productions} productions. "
-                "Vous pouvez generer un rapport detaille en PDF ou Excel."
+                f"Données du registre : {producers.count()} producteurs, "
+                f"{parcels.count()} parcelles, {float(totals['harvested'] or 0):.2f} kg récoltés et "
+                f"{float(totals['delivered'] or 0):.2f} kg livrés."
             ),
-            'suggestions': ['Generer un rapport mensuel', 'Voir les recommandations'],
+            'suggestions': ['Générer un rapport coopératif', 'Voir les écarts récolte/livraison'],
         }
 
 
@@ -314,11 +316,9 @@ class RecommendationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def generate_for_user(self, request):
         user = request.user
-        from producers.models import Producer
-        from parcels.models import Parcel
-        from productions.models import Production
+        from parcels.models import Parcel, ParcelRegisterHarvest
 
-        producers = Producer.objects.filter(registered_by=user)
+        producers = visible_producers(user)
         count = 0
 
         for producer in producers:
@@ -326,37 +326,17 @@ class RecommendationViewSet(viewsets.ModelViewSet):
             if not parcels.exists():
                 continue
             for parcel in parcels:
-                productions = Production.objects.filter(
-                    parcel=parcel, status='harvested'
-                )
-                if not productions.exists():
+                harvest = ParcelRegisterHarvest.objects.filter(parcel=parcel, period='current', crop_slot='main').first()
+                if not harvest or harvest.actual_yield is None:
                     continue
-
-                total_qty = sum(float(p.weight_green or 0) for p in productions)
-                avg_yield = (total_qty / parcel.area) if parcel.area and parcel.area > 0 else 0
-
-                rec_type = 'yield'
-                title = f"Recommandation pour {parcel}"
-                description = (
-                    f"Rendement moyen : {avg_yield:.0f} kg/ha. "
-                )
-                if avg_yield < 500:
-                    priority = 'high'
-                    description += (
-                        "Rendement faible. Actions : ameliorer la fertilisation, "
-                        "verifier la qualite des semences, optimiser l'espacement."
-                    )
-                elif avg_yield < 1000:
-                    priority = 'medium'
-                    description += (
-                        "Rendement moyen. Actions : optimiser la taille, "
-                        "ameliorer le drainage."
-                    )
-                else:
-                    priority = 'low'
-                    description += (
-                        "Rendement bon. Maintenir les pratiques actuelles."
-                    )
+                estimated = float(harvest.estimated_yield or 0)
+                actual = float(harvest.actual_yield)
+                difference = actual - estimated if estimated else None
+                rec_type, title = 'yield', f"Contrôle de rendement — {parcel.code}"
+                priority = 'high' if difference is not None and difference < 0 else 'medium'
+                description = f"Registre T06 : rendement effectif {actual:.2f} kg/ha."
+                if difference is not None:
+                    description += f" Écart avec l’estimation : {difference:.2f} kg/ha. À vérifier lors de la prochaine inspection."
 
                 AgriculturalRecommendation.objects.get_or_create(
                     producer=producer,
@@ -454,9 +434,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
         return title
 
     def _build_report_data(self, report_type, start, end, region, include_charts, include_recommendations, user):
-        from producers.models import Producer
-        from parcels.models import Parcel
-        from productions.models import Production
+        from parcels.models import Parcel, ParcelRegisterHarvest
         from inspections.models import Inspection
 
         report_data = {
@@ -468,7 +446,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
         }
 
         if report_type in ('producers', 'global', 'region'):
-            producers = Producer.objects.filter(registered_by=user)
+            producers = visible_producers(user)
             if region:
                 producers = producers.filter(region__name__icontains=region)
             report_data['kpis']['producers'] = {
@@ -479,7 +457,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             }
 
         if report_type in ('parcels', 'global', 'region'):
-            producers = Producer.objects.filter(registered_by=user)
+            producers = visible_producers(user)
             if region:
                 producers = producers.filter(region__name__icontains=region)
             parcels = Parcel.objects.filter(producer__in=producers)
@@ -494,27 +472,21 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             }
 
         if report_type in ('productions', 'global', 'region'):
-            producers = Producer.objects.filter(registered_by=user)
+            producers = visible_producers(user)
             if region:
                 producers = producers.filter(region__name__icontains=region)
-            productions = Production.objects.filter(
-                parcel__producer__in=producers,
-                harvest_date__gte=start,
-                harvest_date__lte=end,
-            )
-            total_qty = sum(
-                float(p.weight_green or 0) for p in productions
-            )
+            harvests = ParcelRegisterHarvest.objects.filter(parcel__producer__in=producers, period='current')
+            production_agg = harvests.aggregate(total=Sum('actual_harvest'), delivered=Sum('delivered_quantity'), estimated=Avg('estimated_yield'), actual=Avg('actual_yield'))
             report_data['kpis']['productions'] = {
-                'total_productions': productions.count(),
-                'total_quantity': total_qty,
-                'avg_price': float(
-                    productions.aggregate(avg=Sum('sale_price'))['avg'] or 0
-                ),
+                'register_records': harvests.count(),
+                'total_harvested_kg': float(production_agg['total'] or 0),
+                'total_delivered_kg': float(production_agg['delivered'] or 0),
+                'estimated_yield_average': float(production_agg['estimated'] or 0),
+                'actual_yield_average': float(production_agg['actual'] or 0),
             }
 
         if report_type in ('inspections', 'global', 'region'):
-            producers = Producer.objects.filter(registered_by=user)
+            producers = visible_producers(user)
             if region:
                 producers = producers.filter(region__name__icontains=region)
             inspections = Inspection.objects.filter(
@@ -531,7 +503,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
 
         if include_recommendations:
             recs = AgriculturalRecommendation.objects.filter(
-                producer__registered_by=user,
+                producer__in=visible_producers(user),
                 is_applied=False,
             )[:10]
             report_data['recommendations'] = [
@@ -563,44 +535,10 @@ class AgriculturalAdviceView(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def daily_tip(self, request):
-        tips = [
-            {
-                'id': 1,
-                'title': 'Surveillance matinale',
-                'content': "Surveillez vos plants chaque matin pour detecter les premiers signes de maladie.",
-                'category': 'general',
-                'priority': 'medium',
-            },
-            {
-                'id': 2,
-                'title': 'Espacement des plants',
-                'content': "Maintenez une distance de 2m entre chaque pied de vanille pour une bonne ventilation.",
-                'category': 'planting',
-                'priority': 'medium',
-            },
-            {
-                'id': 3,
-                'title': 'Taille reguliere',
-                'content': "La taille reguliere favorise la floraison et augmente le rendement.",
-                'category': 'maintenance',
-                'priority': 'low',
-            },
-            {
-                'id': 4,
-                'title': 'Engrais organique',
-                'content': "Privilegiez l'engrais organique pour une agriculture durable.",
-                'category': 'fertilizer',
-                'priority': 'medium',
-            },
-            {
-                'id': 5,
-                'title': 'Tuteurs solides',
-                'content': "Installez des tuteurs solides avant la saison des cyclones.",
-                'category': 'general',
-                'priority': 'high',
-            },
-        ]
-        return Response(tips)
+        tips = AgriculturalRecommendation.objects.filter(
+            producer__in=visible_producers(request.user), is_read=False
+        ).order_by('-created_at')[:5]
+        return Response(AgriculturalRecommendationSerializer(tips, many=True).data)
 
     @action(detail=False, methods=['post'])
     def ask(self, request):
@@ -775,11 +713,8 @@ class LLMProxyView(APIView):
         api_key = os.getenv('LLM_API_KEY')
 
         if not api_key:
-            logger.warning('LLM_API_KEY not set in environment - returning demo response')
-            return Response({
-                'response': _demo_response(prompt),
-                'demo': True,
-            }, status=status.HTTP_200_OK)
+            logger.warning('LLM_API_KEY not set in environment')
+            return Response({'error': 'Service IA non configuré.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         try:
             logger.info('LLM proxy request user=%s model=%s prompt_len=%s', getattr(request.user, 'id', None), model, len(prompt))

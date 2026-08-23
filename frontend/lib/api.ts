@@ -59,6 +59,13 @@ export interface Parcel {
   latitude: string
   longitude: string
   altitude?: number | null
+  main_crop?: string | null
+  intercrop?: string | null
+  conversion_status?: 'organic' | 'conversion' | 'conventional' | null
+  conversion_level?: 'C1' | 'C2' | 'C3' | null
+  estimated_yield?: number | null
+  eu_status?: string | null
+  nop_status?: string | null
   status: 'active' | 'inactive' | 'fallow' | 'new'
   status_display?: string
   verification_date?: string | null
@@ -128,6 +135,14 @@ export interface DashboardStats {
     avg_plants_per_parcel: number
     certified: number
     by_status: Record<string, number>
+    by_conversion_status?: Record<string, { count: number; area: number }>
+    by_conversion_level?: Record<string, { count: number; area: number }>
+    register_harvest?: {
+      estimated_yield_average: number
+      actual_yield_average: number
+      actual_harvest_total: number
+      delivered_quantity_total: number
+    }
     by_region: Array<{
       producer__region__name: string
       count: number
@@ -608,7 +623,7 @@ export const aiApi = {
     const now = new Date()
     const y = year || now.getFullYear()
     const parsedMonth = month ? parseInt(month, 10) : null
-    const m = Number.isFinite(parsedMonth) ? parsedMonth : now.getMonth() + 1
+    const m = Number.isFinite(parsedMonth) && parsedMonth !== null ? parsedMonth : now.getMonth() + 1
     const period_start = `${y}-${String(m).padStart(2, '0')}-01`
     const lastDay = new Date(y, m + 1, 0).getDate()
     const period_end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`

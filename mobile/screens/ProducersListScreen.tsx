@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -88,7 +88,7 @@ export default function ProducersListScreen({ navigation }: any) {
             <TouchableOpacity
               key={producer.id}
               style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}
-              onPress={() => navigation.navigate('Collecte', { prefillProducer: producer.code, prefillProducerId: producer.id })}
+              onPress={() => navigation.navigate('ProducerDetail', { producer })}
               activeOpacity={0.85}
             >
               <View style={[styles.iconWrap, { backgroundColor: theme.primaryMuted }]}>
@@ -125,8 +125,6 @@ export default function ProducersListScreen({ navigation }: any) {
   );
 }
 
-import { TextInput } from 'react-native';
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   searchBar: {
@@ -156,4 +154,3 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   locationText: { fontSize: 12 },
 });
-

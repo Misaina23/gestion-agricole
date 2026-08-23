@@ -18,6 +18,7 @@ import QRScannerScreen from './screens/QRScannerScreen';
 import AIAdviceScreen from './screens/AIAdviceScreen';
 import AIReportsScreen from './screens/AIReportsScreen';
 import ProducersListScreen from './screens/ProducersListScreen';
+import ProducerDetailScreen from './screens/ProducerDetailScreen';
 import PhotoUploadScreen from './screens/PhotoUploadScreen';
 import CINScanScreen from './screens/CINScanScreen';
 import CINValidationScreen from './screens/CINValidationScreen';
@@ -94,6 +95,7 @@ function RootNavigator() {
             <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="QRGenerator" component={QRGeneratorScreen} options={{ headerShown: true, title: 'Générer QR Code', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
             <Stack.Screen name="ProducersList" component={ProducersListScreen} options={{ headerShown: true, title: 'Liste des producteurs', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
+            <Stack.Screen name="ProducerDetail" component={ProducerDetailScreen} options={{ headerShown: true, title: 'Producteur et parcelles', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
             <Stack.Screen name="PhotoUpload" component={PhotoUploadScreen} options={{ headerShown: true, title: 'Ajouter des photos', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />
             <Stack.Screen name="CINScan" component={CINScanScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CINValidation" component={CINValidationScreen} options={{ headerShown: true, title: 'Vérification CIN', headerStyle: { backgroundColor: theme.navy }, headerTintColor: '#fff' }} />

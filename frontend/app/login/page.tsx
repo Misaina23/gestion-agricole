@@ -170,7 +170,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Demo credentials hint */}
+          {/* Service availability notice */}
           <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 dark:bg-white/5 dark:border-white/10">
             <p className="text-xs text-white/60 text-center dark:text-white/60">
               Le backend Django est déjà déployé en production

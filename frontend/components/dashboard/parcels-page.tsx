@@ -57,6 +57,12 @@ const statusConfig: Record<string, { label: string; class: string }> = {
   new: { label: "Nouveau", class: "bg-sky-100 text-sky-700 border-sky-200" },
 }
 
+const conversionLabels: Record<string, string> = {
+  organic: "Biologique",
+  conversion: "En conversion",
+  conventional: "Conventionnelle",
+}
+
 export function ParcelsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -191,6 +197,7 @@ export function ParcelsPage() {
   }
 
   const openEditDialog = (parcel: Parcel) => {
+    if (!parcel?.id) return
     setSelectedParcel(parcel)
     setFormData({
       producer: parcel.producer?.toString() || "",
@@ -200,7 +207,11 @@ export function ParcelsPage() {
       latitude: parcel.latitude || "",
       longitude: parcel.longitude || "",
     })
-    setIsEditDialogOpen(true)
+    try {
+      setIsEditDialogOpen(true)
+    } catch (e) {
+      console.error('[parcels] open edit failed', e)
+    }
   }
 
   const openViewDialog = (parcel: Parcel) => {
@@ -335,6 +346,7 @@ export function ParcelsPage() {
                 <TableHead className="font-semibold text-[#1e3a5f]">Producteur</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f]">Commune</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] text-center">Surface (ha)</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f]">Culture / interculture</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] text-center">Pieds</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f]">Coordonnées</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f]">Statut</TableHead>
@@ -358,8 +370,12 @@ export function ParcelsPage() {
                         <p className="text-xs text-[#5a7a9a] font-mono">{parcel.producer_code || '-'}</p>
                       </div>
                     </TableCell>
-                     <TableCell className="text-[#5a7a9a]">{parcel.commune_name || '-'}</TableCell>
+                    <TableCell className="text-[#5a7a9a]">{parcel.commune_name || '-'}</TableCell>
                     <TableCell className="text-center font-semibold text-[#1e3a5f]">{toNumber(parcel.area).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <p className="font-medium text-[#0a1628]">{parcel.main_crop || 'Non renseigné'}</p>
+                      <p className="text-xs text-[#5a7a9a]">{parcel.intercrop || '—'}</p>
+                    </TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex items-center justify-center px-2 py-1 rounded-full bg-[#e8f4fc] text-[#1e3a5f] font-semibold text-sm">
                         {parcel.vanilla_plants || 0}
@@ -525,7 +541,7 @@ export function ParcelsPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog key={`edit-${selectedParcel?.id || 'none'}`} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">

@@ -6,6 +6,8 @@ backend/*/__pycache__/
 backend/*.log
 backend/db.sqlite3
 backend/*.pyc
+**/__pycache__/
+*.py[cod]
 
 # Mobile
 mobile/.env

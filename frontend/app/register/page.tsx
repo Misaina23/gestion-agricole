@@ -28,11 +28,11 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: keyof typeof formData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     if (!formData.username.trim() || !formData.password.trim() || !formData.email.trim()) {
@@ -295,4 +295,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

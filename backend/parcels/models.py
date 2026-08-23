@@ -25,7 +25,6 @@ class Parcel(TimeStampedModel):
     # Identification
     code = models.CharField(
         max_length=50,
-        unique=True,
         verbose_name='Code parcelle'
     )
     name = models.CharField(
@@ -86,6 +85,26 @@ class Parcel(TimeStampedModel):
         decimal_places=4,
         verbose_name='Superficie (ha)'
     )
+    # Source register fields.  A parcel code such as "P1" is only unique for
+    # its producer (the cooperative register reuses those codes).
+    main_crop = models.CharField(max_length=200, blank=True, null=True, verbose_name='Culture principale')
+    intercrop = models.CharField(max_length=300, blank=True, null=True, verbose_name='Interculture')
+    conversion_status = models.CharField(
+        max_length=20,
+        choices=[('organic', 'Biologique'), ('conversion', 'En conversion'), ('conventional', 'Conventionnelle')],
+        blank=True, null=True, verbose_name='Statut de conversion'
+    )
+    conversion_level = models.CharField(
+        max_length=2,
+        choices=[('C1', 'C1'), ('C2', 'C2'), ('C3', 'C3')],
+        blank=True, null=True, verbose_name='Niveau de conversion'
+    )
+    conversion_start_date = models.DateField(blank=True, null=True, verbose_name='Début de conversion')
+    eu_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut UE')
+    nop_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut NOP')
+    estimated_yield = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Rendement estimé (kg/ha)')
+    actual_harvest = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Récolte effective (kg)')
+    delivered_quantity = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Quantité livrée (kg)')
     vanilla_plants = models.PositiveIntegerField(
         default=0,
         verbose_name='Nombre de pieds de vanille'
@@ -181,6 +200,9 @@ class Parcel(TimeStampedModel):
         verbose_name = 'Parcelle'
         verbose_name_plural = 'Parcelles'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['producer', 'code'], name='unique_parcel_code_per_producer')
+        ]
     
     def __str__(self):
         return f"{self.code} - {self.producer.name}"
@@ -198,6 +220,32 @@ class Parcel(TimeStampedModel):
         if self.vanilla_plants and self.vanilla_plants > 0:
             return round((self.productive_plants / self.vanilla_plants) * 100, 1)
         return 0
+
+
+class ParcelRegisterHarvest(TimeStampedModel):
+    """Harvest/delivery values exactly as recorded in the T06 parcel register.
+
+    This is deliberately separate from operational Production records: the
+    register gives annual aggregate values but no harvest date or batch code.
+    """
+    PERIOD_CHOICES = [('current', 'Année en cours'), ('previous', 'Récolte N-1')]
+    CROP_SLOT_CHOICES = [
+        ('main', 'Culture principale'),
+        ('intercrop_1', 'Interculture / rotation 1'),
+        ('intercrop_2', 'Interculture / rotation 2'),
+    ]
+    parcel = models.ForeignKey(Parcel, on_delete=models.CASCADE, related_name='register_harvests')
+    period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    crop_slot = models.CharField(max_length=15, choices=CROP_SLOT_CHOICES)
+    estimated_yield = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Rendement estimé (kg/ha)')
+    actual_harvest = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Récolte effective (kg)')
+    actual_yield = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Rendement effectif (kg/ha)')
+    delivered_quantity = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Quantité livrée (kg)')
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['parcel', 'period', 'crop_slot'], name='unique_register_harvest_slot')]
+        verbose_name = 'Relevé récolte du registre'
+        verbose_name_plural = 'Relevés récolte du registre'
 
 
 class ParcelPhoto(TimeStampedModel):

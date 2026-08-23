@@ -90,38 +90,8 @@ class Command(BaseCommand):
                     commune.district = district
                     commune.save()
 
-        # Create sample producers and parcels for testing the dashboard
-        for index, (name, code, region_name, commune_name) in enumerate([
-            ('Rabenja Jean', 'PRD-001', 'Analamanga', 'Antananarivo'),
-            ('Rakoto Hery', 'PRD-002', 'Haute Matsiatra', 'Fianarantsoa'),
-            ('Andriana Solo', 'PRD-003', 'Sava', 'Sambava'),
-            ('Mialy Fetra', 'PRD-004', 'Atsimo-Andrefana', 'Toliara I'),
-        ], start=1):
-            region = region_lookup[region_name]
-            commune = Commune.objects.get(name=commune_name, region=region)
-            producer, created = Producer.objects.get_or_create(
-                code=code,
-                defaults={
-                    'name': name,
-                    'region': region,
-                    'district': commune.district,
-                    'commune': commune,
-                    'phone': f'+261 {100000000 + index}',
-                    'status': 'active',
-                }
-            )
-            if created:
-                self.stdout.write(f'  Created producer: {name}')
-
-            Parcel.objects.get_or_create(
-                code=f'PAR-{index:03d}',
-                defaults={
-                    'producer': producer,
-                    'area': 1.5 + index * 0.25,
-                    'vanilla_plants': 120 + index * 20,
-                    'status': 'active',
-                }
-            )
+        # Agricultural records are intentionally not seeded. Import the
+        # cooperative workbook with `import_vintsy_register` instead.
         
         # Create Vanilla Varieties
         varieties_data = [
