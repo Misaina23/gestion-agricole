@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from accounts.models import User
+from accounts.serializers import TokenObtainPairWithEmailSerializer
 from .models import ActivityLog
 
 
@@ -18,18 +19,21 @@ def _client_ip(request):
 
 class LoggingTokenObtainPairView(TokenObtainPairView):
     """Token endpoint that records successful and failed login attempts."""
+    serializer_class = TokenObtainPairWithEmailSerializer
 
     def post(self, request, *args, **kwargs):
-        username = (request.data or {}).get("username")
+        identifier = (request.data or {}).get("username_field") or (request.data or {}).get("username")
         response = super().post(request, *args, **kwargs)
         ip = _client_ip(request)
         if response.status_code == status.HTTP_200_OK:
-            user = User.objects.filter(username=username).first()
+            user = User.objects.filter(username=identifier).first()
+            if not user:
+                user = User.objects.filter(email__iexact=identifier).first()
             ActivityLog.objects.create(
                 user=user,
                 action="LOGIN",
                 module="auth",
-                object_repr=username or "-",
+                object_repr=identifier or "-",
                 ip_address=ip,
                 timestamp=timezone.now(),
             )
@@ -37,7 +41,7 @@ class LoggingTokenObtainPairView(TokenObtainPairView):
             ActivityLog.objects.create(
                 action="LOGIN_FAILED",
                 module="auth",
-                object_repr=username or "-",
+                object_repr=identifier or "-",
                 ip_address=ip,
                 timestamp=timezone.now(),
             )

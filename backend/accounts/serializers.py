@@ -4,6 +4,7 @@ Serializers for Accounts App
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -89,6 +90,29 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+class TokenObtainPairWithEmailSerializer(TokenObtainPairSerializer):
+    """Allow login with username or email"""
+    username_field = serializers.CharField(required=False)
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        identifier = (attrs.pop('username_field', None) or attrs.pop('username', '') or '').strip()
+        password = attrs.get('password')
+
+        if not identifier or not password:
+            raise serializers.ValidationError('Identifiants requis.')
+
+        user = User.objects.filter(username=identifier).first()
+        if not user:
+            user = User.objects.filter(email__iexact=identifier).first()
+
+        if not user or not user.check_password(password) or not user.is_active:
+            raise serializers.ValidationError('Identifiants incorrects ou compte inactif.')
+
+        attrs['username'] = user.username
+        return super().validate({'username': user.username, 'password': password})
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
     """Serializer for user registration (public endpoint)"""
     password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -128,4 +152,5 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
 

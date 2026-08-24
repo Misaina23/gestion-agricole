@@ -104,14 +104,14 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-white/90 text-sm dark:text-white/80">
-                Nom d&apos;utilisateur
+                Nom d&apos;utilisateur ou email
               </Label>
               <Input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Entrez votre identifiant"
+                placeholder="Entrez votre identifiant ou email"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#87ceeb] focus:ring-[#87ceeb]/30 h-12 dark:bg-white/10 dark:border-white/20 dark:text-white dark:placeholder:text-white/40 dark:focus:border-[#87ceeb] dark:focus:ring-[#87ceeb]/30"
                 disabled={isLoading}
               />
