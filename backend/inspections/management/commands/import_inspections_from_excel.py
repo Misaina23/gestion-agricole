@@ -7,12 +7,6 @@ Inspection records are derived from:
 
 Existing Inspection objects are matched by:
 - producer + inspection_type + planned_date/actual_date + inspector
-
-Usage:
-    python manage.py import_inspections_from_excel <path_to_excel_file>
-
-Example:
-    python manage.py import_inspections_from_excel "T06COOPERATIVE VINTSY ANNEE 2026.-0.xlsx"
 """
 import os
 import secrets
@@ -64,6 +58,7 @@ class Command(BaseCommand):
             return
 
         dry_run = options['dry_run']
+        limit = options.get('limit')
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN - no data will be saved'))
 
@@ -72,21 +67,17 @@ class Command(BaseCommand):
         ws_members = wb['2-Registre des membres']
         ws_units = wb['3-Registre des unités'] if '3-Registre des unités' in wb.sheetnames else None
 
-        producer_cache = {}
-        inspector_cache = {}
-        created = 0
-        updated = 0
-        skipped = 0
+        self.stdout.write('Loading reference data...')
+        producers = {p.code: p for p in Producer.objects.all()}
+        producers_by_id = {p.id: p for p in Producer.objects.all()}
+        parcels_by_producer = {}
+        for parcel in Parcel.objects.select_related('producer').all():
+            parcels_by_producer.setdefault(parcel.producer_id, []).append(parcel)
 
-        def get_producer(code):
-            code = to_str(code)
-            if not code:
-                return None
-            if code in producer_cache:
-                return producer_cache[code]
-            producer = Producer.objects.filter(code=code).first()
-            producer_cache[code] = producer
-            return producer
+        existing_inspections = set(
+            Inspection.objects.values_list('code', flat=True)
+        )
+        inspector_cache = {}
 
         def get_or_create_inspector(name):
             name = to_str(name)
@@ -113,41 +104,89 @@ class Command(BaseCommand):
             inspector_cache[key] = inspector
             return inspector
 
-        def upsert_inspection(producer, parcel, inspection_type, planned_date, actual_date, inspector, result, status, observations=''):
-            if not producer:
-                return None, False
-            code = f"INS-{producer.code}-{inspection_type}-{actual_date or planned_date}".upper()
-            code = to_str(code)[:50]
-            defaults = {
-                'producer': producer,
-                'parcel': parcel,
-                'inspection_type': inspection_type,
-                'planned_date': planned_date,
-                'actual_date': actual_date,
-                'inspector': inspector,
-                'status': status,
-                'result': result or 'passed',
-                'observations': observations or '',
-                'notes': '',
-            }
-            inspection, was_created = Inspection.objects.update_or_create(
-                code=code,
-                defaults=defaults,
-            )
-            return inspection, was_created
+        def build_code(producer_code, inspection_type, date_value):
+            return f"INS-{producer_code}-{inspection_type}-{date_value}".upper().replace(' ', '-')[:50]
 
-        with transaction.atomic():
-            # Sheet 2 -> producers
-            limit = options.get('limit')
-            processed = 0
-            for row in ws_members.iter_rows(min_row=3, values_only=True):
-                if limit is not None and processed >= limit:
+        to_create = []
+        to_update = []
+        skipped = 0
+        processed = 0
+
+        self.stdout.write('Processing member sheet...')
+        rows = list(ws_members.iter_rows(min_row=3, values_only=True))
+        for row in rows:
+            if limit is not None and processed >= limit:
+                break
+            producer_code = to_str(row[3])
+            producer = producers.get(producer_code)
+            if not producer:
+                skipped += 1
+                processed += 1
+                continue
+
+            internal_date = to_date(row[12])
+            internal_inspector_name = to_str(row[13])
+            external_date = to_date(row[14])
+
+            inspector = get_or_create_inspector(internal_inspector_name) if internal_inspector_name else None
+            parcel = (parcels_by_producer.get(producer.id) or [None])[0]
+
+            if internal_date:
+                code = build_code(producer.code, 'routine', internal_date)
+                if code in existing_inspections:
+                    updated += 1
+                else:
+                    to_create.append(Inspection(
+                        code=code,
+                        producer=producer,
+                        parcel=parcel,
+                        inspection_type='routine',
+                        planned_date=internal_date,
+                        actual_date=internal_date,
+                        inspector=inspector,
+                        status='completed',
+                        result='passed',
+                        observations='Inspection interne importée depuis le registre des membres.',
+                        notes='',
+                    ))
+                    existing_inspections.add(code)
+
+            if external_date:
+                code = build_code(producer.code, 'certification', external_date)
+                if code in existing_inspections:
+                    updated += 1
+                else:
+                    to_create.append(Inspection(
+                        code=code,
+                        producer=producer,
+                        parcel=parcel,
+                        inspection_type='certification',
+                        planned_date=external_date,
+                        actual_date=external_date,
+                        inspector=inspector,
+                        status='completed',
+                        result='passed',
+                        observations='Inspection ECOCERT importée depuis le registre des membres.',
+                        notes='',
+                    ))
+                    existing_inspections.add(code)
+
+            processed += 1
+            if processed % 1000 == 0:
+                self.stdout.write(f'  ... {processed} rows processed')
+
+        self.stdout.write(f'Member sheet done. Pending creates: {len(to_create)}')
+
+        # Sheet 3 -> units
+        if ws_units:
+            self.stdout.write('Processing unit sheet...')
+            processed_units = 0
+            for row in ws_units.iter_rows(min_row=3, values_only=True):
+                if limit is not None and processed_units >= limit:
                     break
-                producer_code = to_str(row[3])
-                producer = get_producer(producer_code)
-                if not producer:
-                    skipped += 1
-                    processed += 1
+                unit_name = to_str(row[0])
+                unit_code = to_str(row[1])
+                if not unit_name and not unit_code:
                     continue
 
                 internal_date = to_date(row[12])
@@ -155,112 +194,71 @@ class Command(BaseCommand):
                 external_date = to_date(row[14])
 
                 inspector = get_or_create_inspector(internal_inspector_name) if internal_inspector_name else None
+                producer = None
+                if unit_name:
+                    suffix = unit_name.split('/')[-1].strip()
+                    for p in producers.values():
+                        if suffix and (suffix in (p.unit_name or '')):
+                            producer = p
+                            break
+
+                if not producer:
+                    skipped += 1
+                    processed_units += 1
+                    continue
+
+                parcel = (parcels_by_producer.get(producer.id) or [None])[0]
 
                 if internal_date:
-                    parcel = producer.parcels.first()
-                    _, was_created = upsert_inspection(
-                        producer=producer,
-                        parcel=parcel,
-                        inspection_type='routine',
-                        planned_date=internal_date,
-                        actual_date=internal_date,
-                        inspector=inspector,
-                        result='passed',
-                        status='completed',
-                        observations='Inspection interne importée depuis le registre des membres.',
-                    )
-                    if was_created:
-                        created += 1
-                    else:
-                        updated += 1
+                    code = build_code(producer.code, 'routine', internal_date)
+                    if code not in existing_inspections:
+                        to_create.append(Inspection(
+                            code=code,
+                            producer=producer,
+                            parcel=parcel,
+                            inspection_type='routine',
+                            planned_date=internal_date,
+                            actual_date=internal_date,
+                            inspector=inspector,
+                            status='completed',
+                            result='passed',
+                            observations='Inspection interne importée depuis le registre des unités.',
+                            notes='',
+                        ))
+                        existing_inspections.add(code)
 
                 if external_date:
-                    parcel = producer.parcels.first()
-                    _, was_created = upsert_inspection(
-                        producer=producer,
-                        parcel=parcel,
-                        inspection_type='certification',
-                        planned_date=external_date,
-                        actual_date=external_date,
-                        inspector=inspector,
-                        result='passed',
-                        status='completed',
-                        observations='Inspection ECOCERT importée depuis le registre des membres.',
-                    )
-                    if was_created:
-                        created += 1
-                    else:
-                        updated += 1
+                    code = build_code(producer.code, 'certification', external_date)
+                    if code not in existing_inspections:
+                        to_create.append(Inspection(
+                            code=code,
+                            producer=producer,
+                            parcel=parcel,
+                            inspection_type='certification',
+                            planned_date=external_date,
+                            actual_date=external_date,
+                            inspector=inspector,
+                            status='completed',
+                            result='passed',
+                            observations='Inspection ECOCERT importée depuis le registre des unités.',
+                            notes='',
+                        ))
+                        existing_inspections.add(code)
 
-                processed += 1
+                processed_units += 1
 
-            # Sheet 3 -> production units (if present)
-            if ws_units:
-                processed_units = 0
-                for row in ws_units.iter_rows(min_row=3, values_only=True):
-                    if limit is not None and processed_units >= limit:
-                        break
-                    unit_name = to_str(row[0])
-                    unit_code = to_str(row[1])
-                    if not unit_name and not unit_code:
-                        continue
-                    internal_date = to_date(row[12])
-                    internal_inspector_name = to_str(row[13])
-                    external_date = to_date(row[14])
-
-                    inspector = get_or_create_inspector(internal_inspector_name) if internal_inspector_name else None
-
-                    if internal_date or external_date:
-                        producers = Producer.objects.filter(unit_name__icontains=unit_name.split('/')[-1].strip() if unit_name else '')
-                        producer = producers.first()
-                        if not producer:
-                            skipped += 1
-                            processed_units += 1
-                            continue
-
-                        if internal_date:
-                            parcel = producer.parcels.first()
-                            _, was_created = upsert_inspection(
-                                producer=producer,
-                                parcel=parcel,
-                                inspection_type='routine',
-                                planned_date=internal_date,
-                                actual_date=internal_date,
-                                inspector=inspector,
-                                result='passed',
-                                status='completed',
-                                observations='Inspection interne importée depuis le registre des unités.',
-                            )
-                            if was_created:
-                                created += 1
-                            else:
-                                updated += 1
-
-                        if external_date:
-                            parcel = producer.parcels.first()
-                            _, was_created = upsert_inspection(
-                                producer=producer,
-                                parcel=parcel,
-                                inspection_type='certification',
-                                planned_date=external_date,
-                                actual_date=external_date,
-                                inspector=inspector,
-                                result='passed',
-                                status='completed',
-                                observations='Inspection ECOCERT importée depuis le registre des unités.',
-                            )
-                            if was_created:
-                                created += 1
-                            else:
-                                updated += 1
-
-                    processed_units += 1
+        self.stdout.write(f'Unit sheet done. Pending creates: {len(to_create)}')
 
         if dry_run:
-            self.stdout.write(self.style.WARNING('DRY RUN - no changes were saved.'))
+            self.stdout.write(self.style.WARNING(
+                f'DRY RUN complete: would create {len(to_create)} inspections, {updated} would be skipped as existing, {skipped} skipped rows.'
+            ))
         else:
+            self.stdout.write('Saving inspections...')
+            with transaction.atomic():
+                if to_create:
+                    Inspection.objects.bulk_create(to_create, batch_size=1000)
             limit_msg = f' (limited to {limit} rows)' if limit is not None else ''
             self.stdout.write(self.style.SUCCESS(
-                f'Import complete{limit_msg}: {created} inspections created, {updated} updated, {skipped} skipped.'
+                f'Import complete{limit_msg}: {len(to_create)} inspections created, {updated} skipped as existing, {skipped} skipped rows.'
             ))
-
