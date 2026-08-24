@@ -18,6 +18,7 @@ const API_URL = API_BASE_URL
 export interface Producer {
   id: number
   code: string
+  name: string
   last_name: string
   first_name?: string | null
   unit_name?: string | null
@@ -29,7 +30,10 @@ export interface Producer {
   commune: number
   commune_name?: string
   fokontany?: number | null
+  fokontany_name?: string | null
   joined_at?: string | null
+  status: 'active' | 'inactive' | 'suspended' | 'pending'
+  status_display?: string
   risk_category?: 'low' | 'medium' | 'high' | null
   identified_risks?: string | null
   member_processing?: 'yes' | 'no' | null
@@ -39,8 +43,11 @@ export interface Producer {
   last_external_inspection_at?: string | null
   eu_status?: 'active' | 'suspended' | 'withdrawn' | 'abandoned' | null
   nop_status?: 'active' | 'suspended' | 'abandoned' | null
-  status: 'active' | 'inactive' | 'suspended' | 'pending'
+  exclusion_reason?: string | null
+  exclusion_date?: string | null
   synced: boolean
+  registered_by?: number | null
+  registered_by_name?: string | null
   parcels_count?: number
   total_area?: number
   total_plants?: number
@@ -54,6 +61,7 @@ export interface Producer {
 export interface Parcel {
   id: number
   code: string
+  name?: string | null
   producer: number
   producer_name?: string
   producer_code?: string
@@ -64,6 +72,7 @@ export interface Parcel {
   main_crop?: string | null
   intercrop?: string | null
   vanilla_plants: number
+  productive_plants?: number
   bio_location?: 'oui' | 'non' | 'yes' | 'no' | null
   latitude?: string | null
   longitude?: string | null
@@ -77,6 +86,30 @@ export interface Parcel {
   actual_harvest?: number | null
   actual_yield?: number | null
   delivered_quantity?: number | null
+  variety?: number | null
+  variety_name?: string | null
+  soil_type?: string | null
+  soil_type_display?: string | null
+  shade_percentage?: number
+  irrigation?: boolean
+  planting_date?: string | null
+  first_harvest_date?: string | null
+  status?: 'active' | 'inactive' | 'fallow' | 'new'
+  status_display?: string
+  is_certified?: boolean
+  certification_date?: string | null
+  plant_density?: number
+  productivity_rate?: number
+  register_harvests?: Array<{
+    id: number
+    period: string
+    crop_slot: string
+    estimated_yield?: number | null
+    actual_harvest?: number | null
+    actual_yield?: number | null
+    delivered_quantity?: number | null
+  }>
+  notes?: string | null
   created_at: string
   updated_at: string
 }
@@ -86,19 +119,38 @@ export interface Production {
   code: string
   parcel: number
   parcel_code?: string
+  parcel_name?: string | null
   producer_name?: string
   producer_code?: string
-  actual_date: string
   region_name?: string
   commune_name?: string
-  harvest_date?: string
-  weight_green: number
-  weight_prepared: number
-  quality?: string
   season: string
+  season_name?: string
+  harvest_date: string
+  harvest_time?: string | null
+  actual_date?: string
+  weight_green: number
+  weight_prepared?: number | null
+  conversion_rate?: number | null
+  pods_count?: number
+  pods_grade_a?: number
+  pods_grade_b?: number
+  pods_grade_c?: number
+  pods_rejected?: number
+  avg_pod_weight?: number | null
+  quality_grade?: number | null
+  quality_grade_name?: string | null
+  vanillin_content?: number | null
+  moisture_content?: number | null
   status: 'harvested' | 'drying' | 'curing' | 'ready' | 'sold'
-  collected_by?: number | null
-  collection_date?: string | null
+  status_display?: string
+  drying_start_date?: string | null
+  drying_end_date?: string | null
+  curing_start_date?: string | null
+  curing_end_date?: string | null
+  sale_date?: string | null
+  sale_price?: number | null
+  buyer?: string | null
   notes?: string | null
   created_at: string
   updated_at: string
@@ -112,14 +164,48 @@ export interface Inspection {
   producer_code?: string
   parcel: number
   parcel_code?: string
+  parcel_name?: string | null
   inspector: number
-  inspector_name?: string
-  actual_date: string
-  inspection_type: 'initial' | 'followup' | 'certification'
-  result: 'passed' | 'failed' | 'pending' | 'conditional'
-  score: number
-  observations: string
-  next_inspection?: string | null
+  inspector_name?: string | null
+  region_name?: string
+  commune_name?: string
+  inspection_type: string
+  type_display?: string
+  planned_date: string
+  actual_date?: string | null
+  status: string
+  status_display?: string
+  result: string
+  result_display?: string
+  score_overall?: number | null
+  score_cultivation?: number | null
+  score_processing?: number | null
+  score_storage?: number | null
+  score_traceability?: number | null
+  score_environment?: number | null
+  observations?: string | null
+  recommendations?: string | null
+  non_conformities?: string | null
+  corrective_actions?: string | null
+  follow_up_required?: boolean
+  follow_up_date?: string | null
+  follow_up_notes?: string | null
+  is_overdue?: boolean
+  checklist_items?: Array<{
+    id: number
+    category: string
+    item: string
+    is_compliant: boolean
+    score?: number | null
+    comment?: string | null
+  }>
+  photos?: Array<{
+    id: number
+    photo: string
+    caption?: string | null
+    category?: string | null
+  }>
+  notes?: string | null
   created_at: string
   updated_at: string
 }

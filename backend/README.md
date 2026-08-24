@@ -50,9 +50,15 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 7. Charger les donnees initiales (optionnel)
+### 7. Charger le registre agricole réel
 ```bash
-python manage.py loaddata initial_data.json
+# Base vide ou réinitialisation complète : supprime les anciens producteurs,
+# parcelles et données agricoles liées, puis charge le registre Vintsy.
+python manage.py seed
+
+# Démarrage normal : met à jour le registre sans supprimer les saisies déjà
+# présentes dans la base.
+python manage.py seed --keep
 ```
 
 ### 8. Lancer le serveur

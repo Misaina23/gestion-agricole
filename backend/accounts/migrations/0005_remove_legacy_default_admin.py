@@ -2,12 +2,9 @@ from django.db import migrations
 
 
 def remove_legacy_default_admin(apps, schema_editor):
-    """Do not create application users from migrations.
-
-    The old migration created a shared, hard-coded administrator account.  A
-    database migration must only define schema/data required by the product;
-    administrators are created explicitly with ``createsuperuser``.
-    """
+    # This account came from the previous hard-coded migration, not from the
+    # cooperative register.  Existing installations receive the same cleanup
+    # as fresh installations.
     apps.get_model('accounts', 'User').objects.filter(
         username='andrianisaina23@gmail.com'
     ).delete()
@@ -16,7 +13,7 @@ def remove_legacy_default_admin(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_user_is_supervisor_user_platform_and_more'),
+        ('accounts', '0004_user_code'),
     ]
 
     operations = [

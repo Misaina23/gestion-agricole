@@ -3,7 +3,7 @@ from producers.models import Producer
 from parcels.models import Parcel
 
 class Command(BaseCommand):
-    help = 'Clean PRD- fake data'
+    help = 'Remove legacy PRD records created before the register seed'
 
     def handle(self, *args, **options):
         prd = Producer.objects.filter(code__startswith='PRD-')

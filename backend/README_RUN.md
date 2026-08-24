@@ -28,6 +28,7 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 # optionally set env vars from .env manually or use a tool
 python manage.py migrate
+python manage.py seed --keep
 python manage.py runserver 0.0.0.0:8000
 ```
 

@@ -41,5 +41,8 @@ if (Test-Path "$PSScriptRoot\\.env") {
 Write-Host "Running migrations..."
 python manage.py migrate
 
+Write-Host "Seeding the real cooperative register..."
+python manage.py seed --keep
+
 Write-Host "Starting development server on 0.0.0.0:8000"
 python manage.py runserver 0.0.0.0:8000

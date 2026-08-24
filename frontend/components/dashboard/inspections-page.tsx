@@ -65,19 +65,32 @@ interface Inspection {
   parcel: number
   parcel_code?: string
   inspector: number
-  inspector_name?: string
-  actual_date: string
-  inspection_type?: "initial" | "followup" | "certification"
-  result?: "passed" | "failed" | "pending" | "conditional"
-  score: number
-  observations: string
-  next_inspection: string | null
+  inspector_name?: string | null
+  region_name?: string
+  commune_name?: string
+  inspection_type: string
+  type_display?: string
+  planned_date: string
+  actual_date?: string | null
+  status: string
+  status_display?: string
+  result: string
+  result_display?: string
+  score_overall?: number | null
+  is_overdue?: boolean
+  observations?: string | null
+  notes?: string | null
+  created_at: string
+  updated_at: string
 }
 
-const inspection_typeConfig = {
-  initial: { label: "Initiale", class: "bg-[#e8f4fc] text-[#1e3a5f] border-[#c5ddf5]" },
-  followup: { label: "Suivi", class: "bg-amber-100 text-amber-700 border-amber-200" },
+const inspection_typeConfig: Record<string, { label: string; class: string }> = {
+  routine: { label: "Routine", class: "bg-[#e8f4fc] text-[#1e3a5f] border-[#c5ddf5]" },
   certification: { label: "Certification", class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  quality: { label: "Controle qualite", class: "bg-purple-100 text-purple-700 border-purple-200" },
+  phytosanitary: { label: "Phytosanitaire", class: "bg-amber-100 text-amber-700 border-amber-200" },
+  traceability: { label: "Tracabilite", class: "bg-sky-100 text-sky-700 border-sky-200" },
+  follow_up: { label: "Suivi", class: "bg-orange-100 text-orange-700 border-orange-200" },
 }
 
 const resultConfig = {
@@ -221,11 +234,11 @@ export function InspectionsPage() {
       producer: inspection.producer.toString(),
       parcel: inspection.parcel.toString(),
       inspector: inspection.inspector.toString(),
-      actual_date: inspection.actual_date,
+      actual_date: inspection.actual_date || inspection.planned_date,
       inspection_type: inspection.inspection_type,
       result: inspection.result,
-      score: inspection.score.toString(),
-      observations: inspection.observations,
+      score: (inspection.score_overall ?? 0).toString(),
+      observations: inspection.observations || "",
     })
     setIsEditDialogOpen(true)
   }
@@ -314,10 +327,13 @@ export function InspectionsPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous inspection_types</SelectItem>
-                <SelectItem value="initial">Initiale</SelectItem>
-                <SelectItem value="followup">Suivi</SelectItem>
+                <SelectItem value="all">Tous types</SelectItem>
+                <SelectItem value="routine">Routine</SelectItem>
                 <SelectItem value="certification">Certification</SelectItem>
+                <SelectItem value="quality">Controle qualite</SelectItem>
+                <SelectItem value="phytosanitary">Phytosanitaire</SelectItem>
+                <SelectItem value="traceability">Tracabilite</SelectItem>
+                <SelectItem value="follow_up">Suivi</SelectItem>
               </SelectContent>
             </Select>
             <Select value={resultFilter} onValueChange={setResultFilter}>
@@ -379,8 +395,8 @@ export function InspectionsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${getScoreColor(inspection.score)}`}>
-                        {inspection.score > 0 ? inspection.score : "-"}
+                      <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${getScoreColor(inspection.score_overall ?? 0)}`}>
+                        {inspection.score_overall != null && inspection.score_overall > 0 ? inspection.score_overall : "-"}
                       </span>
                     </TableCell>
                     <TableCell>

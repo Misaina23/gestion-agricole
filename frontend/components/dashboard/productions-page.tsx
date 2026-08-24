@@ -64,12 +64,17 @@ interface Production {
   producer_code?: string
   parcel: number
   parcel_code?: string
-  actual_date: string
+  region_name?: string
+  commune_name?: string
+  season_name?: string
+  harvest_date: string
+  actual_date?: string
   weight_green: number
-  weight_prepared: number
-  quality?: "premium" | "standard" | "second"
-  season: string
-  status?: "harvested" | "drying" | "curing" | "ready" | "sold"
+  weight_prepared?: number | null
+  pods_count?: number
+  quality_grade_name?: string | null
+  status: 'harvested' | 'drying' | 'curing' | 'ready' | 'sold'
+  status_display?: string
 }
 
 const qualityConfig = {
@@ -213,10 +218,10 @@ export function ProductionsPage() {
     setFormData({
       producer: production.producer.toString(),
       parcel: production.parcel.toString(),
-      actual_date: production.actual_date,
+      actual_date: production.actual_date || production.harvest_date,
       weight_green: production.weight_green.toString(),
-      weight_prepared: production.weight_prepared.toString(),
-      quality: production.quality,
+      weight_prepared: (production.weight_prepared || 0).toString(),
+      quality: production.quality_grade_name || "",
       status: production.status,
     })
     setIsEditDialogOpen(true)
@@ -277,7 +282,7 @@ export function ProductionsPage() {
         <StatCard title="Vanille Verte" value={`${Number(productions.reduce((acc: number, p: Production) => acc + Number(p.weight_green || 0), 0)).toFixed(1)}`} unit="kg" icon={<Scale className="w-5 h-5" />} />
         <StatCard title="Vanille Preparee" value={`${Number(productions.reduce((acc: number, p: Production) => acc + Number(p.weight_prepared || 0), 0)).toFixed(1)}`} unit="kg" icon={<Package className="w-5 h-5" />} />
         <StatCard title="Taux Conversion" value={`${(() => { const g = productions.reduce((a: number, p: Production) => a + Number(p.weight_green || 0), 0); const p = productions.reduce((a: number, p: Production) => a + Number(p.weight_prepared || 0), 0); return g > 0 ? ((p / g) * 100).toFixed(1) : '0'; })()}%`} icon={<TrendingUp className="w-5 h-5 text-[#1e3a5f]" />} />
-        <StatCard title="Premium" value={productions.filter((p: Production) => p.quality === "premium").length} icon={<BarChart3 className="w-5 h-5 text-emerald-600" />} />
+        <StatCard title="Gousses" value={`${productions.reduce((a: number, p: Production) => a + Number(p.pods_count || 0), 0)}`} unit="gousses" icon={<BarChart3 className="w-5 h-5 text-emerald-600" />} />
       </div>
 
       {/* Filters */}
@@ -372,8 +377,8 @@ export function ProductionsPage() {
 <TableCell className="text-center font-semibold text-[#1e3a5f]">{Number(production.weight_green || 0).toFixed(1)}</TableCell>
                       <TableCell className="text-center font-semibold text-emerald-600">{Number(production.weight_prepared || 0).toFixed(1)}</TableCell>
                   <TableCell>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${qualityConfig[production.quality]?.class || "bg-gray-100"}`}>
-                      {qualityConfig[production.quality]?.label || production.quality}
+                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-gray-100 text-[#1e3a5f] border-[#c5ddf5]`}>
+                      {production.quality_grade_name || "N/A"}
                     </span>
                   </TableCell>
                   <TableCell>

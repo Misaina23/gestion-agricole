@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     command: >
       sh -c "python manage.py migrate &&
+             python manage.py seed --keep &&
              python manage.py collectstatic --noinput &&
              daphne -b 0.0.0.0 -p 8000 videeko_vanilla.asgi:application"
 

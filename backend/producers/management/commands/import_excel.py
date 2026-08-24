@@ -182,23 +182,23 @@ class Command(BaseCommand):
             first_name = to_str(row[2]) or None
             phone = to_str(row[4]) or None
             joined_at = to_date(row[5])
-            risk_category = to_str(row[8]).lower() if row[8] else None
-            if risk_category not in ('low', 'medium', 'high'):
-                risk_category = None
+            risk_category_raw = to_str(row[8]).lower() if row[8] else None
+            risk_category_map = {'faible': 'low', 'moyen': 'medium', 'fort': 'high', 'low': 'low', 'medium': 'medium', 'high': 'high'}
+            risk_category = risk_category_map.get(risk_category_raw) if risk_category_raw else None
             identified_risks = to_str(row[9]) or None
-            member_processing = to_str(row[11]).lower() if row[11] else None
-            if member_processing not in ('yes', 'no'):
-                member_processing = None
+            member_processing_raw = to_str(row[11]).lower() if row[11] else None
+            member_processing_map = {'oui': 'yes', 'non': 'no', 'yes': 'yes', 'no': 'no'}
+            member_processing = member_processing_map.get(member_processing_raw) if member_processing_raw else None
             processing_activities = to_str(row[12]) or None
             last_internal_inspection_at = to_date(row[13])
             internal_inspector_name = to_str(row[14]) or None
             last_external_inspection_at = to_date(row[15])
-            eu_status = to_str(row[16]).lower() if row[16] else None
-            if eu_status not in ('active', 'suspended', 'withdrawn', 'abandoned'):
-                eu_status = 'active' if to_str(row[16]) else None
-            nop_status = to_str(row[17]).lower() if row[17] else None
-            if nop_status not in ('active', 'suspended', 'abandoned'):
-                nop_status = 'active' if to_str(row[17]) else None
+            eu_status_raw = to_str(row[16]).lower() if row[16] else None
+            eu_status_map = {'actif': 'active', 'suspendu': 'suspended', 'retiré': 'withdrawn', 'retire': 'withdrawn', 'abandonné': 'abandoned', 'abandonne': 'abandoned', 'active': 'active', 'suspended': 'suspended', 'withdrawn': 'withdrawn', 'abandoned': 'abandoned'}
+            eu_status = eu_status_map.get(eu_status_raw, eu_status_raw) if eu_status_raw else None
+            nop_status_raw = to_str(row[17]).lower() if row[17] else None
+            nop_status_map = {'actif': 'active', 'suspendu': 'suspended', 'abandonné': 'abandoned', 'abandonne': 'abandoned', 'active': 'active', 'suspended': 'suspended', 'abandoned': 'abandoned'}
+            nop_status = nop_status_map.get(nop_status_raw, nop_status_raw) if nop_status_raw else None
             exclusion_reason = to_str(row[18]) or None
             exclusion_date = to_date(row[19])
 
@@ -334,7 +334,9 @@ class Command(BaseCommand):
             parcel_rows += 1
 
             producer_code = to_str(row[0])
-            parcel_code = to_str(row[3]) or 'P1'
+            parcel_code = to_str(row[3])
+            if not parcel_code:
+                continue
             registration_date = to_date(row[4])
             area = to_decimal(row[5])
             main_crop = to_str(row[6]) or None

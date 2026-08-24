@@ -297,7 +297,8 @@ def create_or_update_producer(data, request, *, require_location=True):
     existing = Producer.objects.filter(code=code).first() if code else None
 
     defaults = {
-        'name': data.get('name') or data.get('nomPrenom') or data.get('nom_producteur') or (existing.code if existing else 'Producteur'),
+        'last_name': data.get('last_name') or data.get('nom') or data.get('name') or (existing.code if existing else ''),
+        'first_name': data.get('first_name') or data.get('prenom') or None,
         'phone': data.get('phone') or data.get('telephone') or None,
         'email': data.get('email') or None,
         'cin': data.get('cin') or None,
@@ -307,7 +308,6 @@ def create_or_update_producer(data, request, *, require_location=True):
         'fokontany': fokontany,
         'address': data.get('address') or data.get('nomSite') or data.get('site') or None,
         'status': data.get('status') or 'pending',
-        'is_certified': bool(data.get('is_certified', False)),
         'notes': build_notes(data, ['culture', 'interculture', 'estimationRecolte', 'rendement', 'quantiteLivree', 'dateIntegration', 'date_integration']),
         'synced': True,
         'registered_by': request.user,
@@ -355,8 +355,9 @@ def sync_collecte(request):
         parcel_code = normalize_code(
             request.data.get('codeUniqueParcelle')
             or request.data.get('code_unique_parcelle')
-            or f"PC-{producer.code}-{date.today().strftime('%Y%m%d')}"
         )
+        if not parcel_code:
+            raise ValueError('codeUniqueParcelle requis')
         notes = build_notes(
             request.data,
             ['nomSite', 'culture', 'interculture', 'estimationRecolte', 'rendement', 'quantiteLivree', 'dateIntegration', 'gpsMenage']
@@ -466,7 +467,9 @@ def sync_production(request):
             raise ValueError('saison requise')
 
         harvest_date = parse_date_value(request.data.get('harvest_date') or request.data.get('actual_date')) or date.today()
-        code = normalize_code(request.data.get('code') or request.data.get('code_production')) or f"PRD-{uuid.uuid4().hex[:8].upper()}"
+        code = normalize_code(request.data.get('code') or request.data.get('code_production'))
+        if not code:
+            raise ValueError('code production requis')
 
         production, created = Production.objects.update_or_create(
             code=code,
@@ -522,7 +525,9 @@ def sync_inspection(request):
         actual_date = parse_date_value(request.data.get('actual_date') or request.data.get('dateInspection')) or date.today()
         planned_date = parse_date_value(request.data.get('planned_date')) or actual_date
         score_overall = parse_int(request.data.get('score') or request.data.get('score_overall'), inspection_score(result) or 0)
-        code = normalize_code(request.data.get('code') or request.data.get('code_inspection')) or f"INS-{uuid.uuid4().hex[:8].upper()}"
+        code = normalize_code(request.data.get('code') or request.data.get('code_inspection'))
+        if not code:
+            raise ValueError('code inspection requis')
 
         inspection, created = Inspection.objects.update_or_create(
             code=code,
