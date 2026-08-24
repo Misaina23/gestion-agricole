@@ -7,33 +7,42 @@ from .models import Producer, Cooperative
 
 @admin.register(Producer)
 class ProducerAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'region', 'commune', 'status', 'is_certified', 'created_at']
-    list_filter = ['status', 'is_certified', 'region', 'commune', 'cooperative']
-    search_fields = ['code', 'name', 'phone', 'cin', 'email']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ['code', 'last_name', 'first_name', 'unit_name', 'region', 'commune', 'eu_status', 'nop_status', 'joined_at']
+    list_filter = ['eu_status', 'nop_status', 'risk_category', 'region', 'commune']
+    search_fields = ['code', 'last_name', 'first_name', 'phone']
+    readonly_fields = ['created_at', 'updated_at', 'full_name', 'parcels_count', 'total_area']
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Identification', {
-            'fields': ('code', 'name', 'gender', 'birth_date', 'cin', 'photo')
-        }),
-        ('Contact', {
-            'fields': ('phone', 'phone_secondary', 'email')
+            'fields': ('code', 'last_name', 'first_name', 'unit_name')
         }),
         ('Localisation', {
-            'fields': ('region', 'commune', 'fokontany', 'address')
+            'fields': ('region', 'district', 'commune', 'fokontany')
         }),
-        ('Statut et certification', {
-            'fields': ('status', 'is_certified', 'certification_date', 'certification_number', 'certification_expiry')
+        ('Contact', {
+            'fields': ('phone',)
         }),
-        ('Cooperative', {
-            'fields': ('cooperative',)
+        ('Inscription', {
+            'fields': ('joined_at',)
         }),
-        ('Notes', {
-            'fields': ('notes', 'registered_by')
+        ('Risques', {
+            'fields': ('risk_category', 'identified_risks')
         }),
-        ('Dates', {
-            'fields': ('created_at', 'updated_at'),
+        ('Préparation / transformation', {
+            'fields': ('member_processing', 'processing_activities')
+        }),
+        ('Inspections', {
+            'fields': ('last_internal_inspection_at', 'internal_inspector_name', 'last_external_inspection_at')
+        }),
+        ('Statuts certification', {
+            'fields': ('eu_status', 'nop_status', 'exclusion_reason', 'exclusion_date')
+        }),
+        ('Résumé', {
+            'fields': ('full_name', 'parcels_count', 'total_area')
+        }),
+        ('Système', {
+            'fields': ('status', 'synced', 'registered_by', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -41,7 +50,7 @@ class ProducerAdmin(admin.ModelAdmin):
 
 @admin.register(Cooperative)
 class CooperativeAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'region', 'president', 'is_active', 'members_count']
+    list_display = ['code', 'name', 'region', 'president', 'is_active']
     list_filter = ['is_active', 'region']
     search_fields = ['code', 'name', 'president']
     readonly_fields = ['created_at', 'updated_at']

@@ -224,3 +224,62 @@ class SyncLog(models.Model):
     
     def __str__(self):
         return f"Sync {self.user.username} - {self.started_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class ProductionUnit(TimeStampedModel):
+    """Production unit / group from the cooperative register."""
+    UNIT_TYPES = [
+        ('group', 'Groupe'),
+        ('site', 'Site'),
+        ('village', 'Village'),
+        ('region', 'Region'),
+    ]
+
+    STATUS_CHOICES = [
+        ('active', 'Actif'),
+        ('inactive', 'Inactif'),
+        ('suspended', 'Suspendu'),
+    ]
+
+    name = models.CharField(max_length=200, verbose_name="Nom de l'unite")
+    code = models.CharField(max_length=50, unique=True, verbose_name='Code unite')
+    unit_type = models.CharField(max_length=20, choices=UNIT_TYPES, default='group', verbose_name="Type d'unite")
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.PROTECT,
+        related_name='production_units',
+        verbose_name='Region'
+    )
+    district = models.ForeignKey(
+        District,
+        on_delete=models.PROTECT,
+        related_name='production_units',
+        blank=True,
+        null=True,
+        verbose_name='District'
+    )
+    commune = models.ForeignKey(
+        Commune,
+        on_delete=models.PROTECT,
+        related_name='production_units',
+        blank=True,
+        null=True,
+        verbose_name='Commune'
+    )
+    manager_name = models.CharField(max_length=200, blank=True, null=True, verbose_name='Responsable')
+    manager_function = models.CharField(max_length=200, blank=True, null=True, verbose_name='Fonction du responsable')
+    phone = models.CharField(max_length=50, blank=True, null=True, verbose_name='Telephone')
+    email = models.EmailField(blank=True, null=True, verbose_name='Email')
+    members_count = models.PositiveIntegerField(default=0, verbose_name='Nombre de membres')
+    total_area = models.DecimalField(max_digits=10, decimal_places=4, default=0, verbose_name='Superficie totale (ha)')
+    creation_date = models.DateField(blank=True, null=True, verbose_name='Date de creation')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='Statut')
+    notes = models.TextField(blank=True, null=True, verbose_name='Observations')
+
+    class Meta:
+        verbose_name = "Unite de production"
+        verbose_name_plural = "Unites de production"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"

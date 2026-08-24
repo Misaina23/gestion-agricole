@@ -34,7 +34,7 @@ class ProducerViewSet(viewsets.ModelViewSet):
     lookup_value_regex = r'\d+'
     queryset = (
         Producer.objects.select_related(
-            'region', 'commune', 'fokontany', 'cooperative', 'registered_by'
+            'region', 'commune', 'fokontany', 'registered_by'
         )
         .prefetch_related('parcels')
         .annotate(
@@ -44,9 +44,9 @@ class ProducerViewSet(viewsets.ModelViewSet):
         )
     )
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['region', 'commune', 'fokontany', 'status', 'is_certified', 'cooperative']
-    search_fields = ['code', 'name', 'phone', 'cin', 'email']
-    ordering_fields = ['created_at', 'name', 'code', 'status']
+    filterset_fields = ['region', 'commune', 'fokontany', 'status', 'risk_category', 'eu_status', 'nop_status']
+    search_fields = ['code', 'last_name', 'first_name', 'phone', 'unit_name']
+    ordering_fields = ['created_at', 'code', 'last_name', 'joined_at']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
@@ -131,17 +131,23 @@ class ProducerViewSet(viewsets.ModelViewSet):
         stats = {
             'total': queryset.count(),
             'by_status': {code: status_counts.get(code, 0) for code, _ in Producer.STATUS_CHOICES},
-            'certified': queryset.filter(is_certified=True).count(),
+            'certified': Producer.objects.filter(
+                parcels__conversion_status='organic'
+            ).distinct().count(),
             'by_region': list(
                 queryset.values('region__name')
                 .annotate(count=Count('id'))
                 .order_by('-count')
             ),
-            'by_cooperative': list(
-                queryset.exclude(cooperative__isnull=True)
-                .values('cooperative__name')
+            'by_risk': list(
+                queryset.values('risk_category')
                 .annotate(count=Count('id'))
-                .order_by('-count')[:10]
+                .order_by('-count')
+            ),
+            'by_eu_status': list(
+                queryset.values('eu_status')
+                .annotate(count=Count('id'))
+                .order_by('-count')
             ),
         }
         return Response(stats)
@@ -190,12 +196,13 @@ class ProducerViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def certify(self, request, pk=None):
-        """Certify a producer"""
+        """Mark a producer as certified (activates the member record).
+
+        Certification is driven by the parcel conversion status (``organic``);
+        this endpoint simply activates the producer record.
+        """
         producer = self.get_object()
-        producer.is_certified = True
-        producer.certification_date = request.data.get('certification_date')
-        producer.certification_number = request.data.get('certification_number')
-        producer.certification_expiry = request.data.get('certification_expiry')
+        producer.status = 'active'
         producer.save()
         return Response(ProducerDetailSerializer(producer).data)
     
@@ -247,7 +254,7 @@ class CooperativeViewSet(viewsets.ModelViewSet):
         stats = {
             'total': Cooperative.objects.count(),
             'active': Cooperative.objects.filter(is_active=True).count(),
-            'total_members': Producer.objects.exclude(cooperative__isnull=True).count(),
+            'total_members': Producer.objects.filter(parcels__isnull=False).distinct().count(),
             'by_region': list(
                 Cooperative.objects.values('region__name')
                 .annotate(count=Count('id'))

@@ -2,70 +2,64 @@
 Producer Models
 """
 import re
-from django.db import connection, models, transaction
+from django.db import models
+from django.db.models import Sum
 from core.models import TimeStampedModel, Region, Commune, Fokontany, District
 
 
 class Producer(TimeStampedModel):
-    """Producer/Farmer model"""
+    """Producer/Farmer model aligned to the T06 cooperative register."""
+
+    # --- Status & decision fields (mapped from Excel Sheet 2) ---
     STATUS_CHOICES = [
         ('active', 'Actif'),
         ('inactive', 'Inactif'),
         ('suspended', 'Suspendu'),
         ('pending', 'En attente'),
     ]
-    
-    GENDER_CHOICES = [
-        ('M', 'Masculin'),
-        ('F', 'Feminin'),
+
+    RISK_CATEGORY_CHOICES = [
+        ('low', 'Faible'),
+        ('medium', 'Moyen'),
+        ('high', 'Fort'),
     ]
-    
-    # Identification
+
+    YN_CHOICES = [
+        ('yes', 'Oui'),
+        ('no', 'Non'),
+    ]
+
+    EU_STATUS_CHOICES = [
+        ('active', 'Actif'),
+        ('suspended', 'Suspendu'),
+        ('withdrawn', 'Retiré'),
+        ('abandoned', 'Abandonné'),
+    ]
+
+    NOP_STATUS_CHOICES = [
+        ('active', 'Actif'),
+        ('suspended', 'Suspendu'),
+        ('abandoned', 'Abandonné'),
+    ]
+
+    # --- Identification ---
     code = models.CharField(
         max_length=50,
         unique=True,
         verbose_name='Code producteur'
     )
-    name = models.CharField(max_length=200, verbose_name='Nom complet')
-    gender = models.CharField(
-        max_length=1,
-        choices=GENDER_CHOICES,
+    last_name = models.CharField(max_length=200, default='', verbose_name='Nom du membre')
+    first_name = models.CharField(max_length=200, blank=True, null=True, verbose_name='Prénom du membre')
+
+    # --- Production unit / location (from register) ---
+    unit_name = models.CharField(
+        max_length=200,
         blank=True,
         null=True,
-        verbose_name='Genre'
+        verbose_name="Nom de l'unité de production"
     )
-    birth_date = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name='Date de naissance'
-    )
-    cin = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        verbose_name='CIN'
-    )
-    
-    # Contact
-    phone = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Telephone'
-    )
-    phone_secondary = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        verbose_name='Telephone secondaire'
-    )
-    email = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name='Email'
-    )
-    
-    # Location
+
+    # Geographical hierarchy (used for import grouping / filtering)
     region = models.ForeignKey(
         Region,
         on_delete=models.PROTECT,
@@ -94,156 +88,152 @@ class Producer(TimeStampedModel):
         null=True,
         verbose_name='Fokontany'
     )
-    address = models.TextField(
+
+    # --- Contact ---
+    phone = models.CharField(
+        max_length=20,
         blank=True,
         null=True,
-        verbose_name='Adresse'
+        verbose_name='Téléphone'
     )
-    
-    # Status and certification
+
+    # --- Registration ---
+    joined_at = models.DateField(blank=True, null=True, verbose_name="Date d'intgration")
+
+    # --- Risk assessment (Sheet 2, cols 9-13) ---
+    risk_category = models.CharField(
+        max_length=20,
+        choices=RISK_CATEGORY_CHOICES,
+        blank=True, null=True,
+        verbose_name='Catégorie de risque'
+    )
+    identified_risks = models.TextField(blank=True, null=True, verbose_name='Risques identifiés')
+    member_processing = models.CharField(
+        max_length=10,
+        choices=YN_CHOICES,
+        blank=True, null=True,
+        verbose_name='Préparation ou transformation simple'
+    )
+    processing_activities = models.TextField(blank=True, null=True, verbose_name='Activités de préparation')
+
+    # --- Inspections (Sheet 2, cols 14-16) ---
+    last_internal_inspection_at = models.DateField(
+        blank=True, null=True, verbose_name='Dernière inspection interne'
+    )
+    internal_inspector_name = models.CharField(
+        max_length=200, blank=True, null=True, verbose_name='Inspecteur SCI'
+    )
+    last_external_inspection_at = models.DateField(
+        blank=True, null=True, verbose_name='Dernière inspection ECOCERT'
+    )
+
+    # --- Status (Sheet 2, cols 17-20) ---
+    eu_status = models.CharField(
+        max_length=20,
+        choices=EU_STATUS_CHOICES,
+        blank=True, null=True,
+        verbose_name='Statut UE'
+    )
+    nop_status = models.CharField(
+        max_length=20,
+        choices=NOP_STATUS_CHOICES,
+        blank=True, null=True,
+        verbose_name='Statut NOP'
+    )
+    exclusion_reason = models.TextField(blank=True, null=True, verbose_name="Raison de l'exclusion")
+    exclusion_date = models.DateField(blank=True, null=True, verbose_name="Date de l'exclusion")
+
+    # --- System fields ---
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending',
-        verbose_name='Statut'
+        verbose_name='Statut système'
     )
-    is_certified = models.BooleanField(
-        default=False,
-        verbose_name='Certifie'
-    )
-    certification_date = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name='Date de certification'
-    )
-    certification_number = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name='Numero de certification'
-    )
-    certification_expiry = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name='Expiration certification'
-    )
-    
-    # Cooperative/Group
-    cooperative = models.ForeignKey(
-        'Cooperative',
-        on_delete=models.SET_NULL,
-        related_name='members',
-        blank=True,
-        null=True,
-        verbose_name='Cooperative'
-    )
-    
-    # Photo
-    photo = models.ImageField(
-        upload_to='producers/photos/',
-        blank=True,
-        null=True,
-        verbose_name='Photo'
-    )
-    
-    # Notes
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name='Notes'
-    )
-    # Fields supplied by the members register, kept verbatim rather than inferred.
-    joined_at = models.DateField(blank=True, null=True, verbose_name="Date d'intégration")
-    risk_category = models.CharField(max_length=100, blank=True, null=True, verbose_name='Catégorie de risque')
-    identified_risks = models.TextField(blank=True, null=True, verbose_name='Risques identifiés')
-    member_processing = models.CharField(max_length=30, blank=True, null=True, verbose_name='Préparation/transformation')
-    processing_activities = models.TextField(blank=True, null=True, verbose_name='Activités de préparation')
-    last_internal_inspection_at = models.DateField(blank=True, null=True, verbose_name='Dernière inspection interne')
-    internal_inspector_name = models.CharField(max_length=200, blank=True, null=True, verbose_name='Inspecteur SCI')
-    last_external_inspection_at = models.DateField(blank=True, null=True, verbose_name='Dernière inspection externe')
-    eu_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut UE')
-    nop_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut NOP')
-    synced = models.BooleanField(default=True, verbose_name='Synchronise')
-    
-    # Agent who registered
+    synced = models.BooleanField(default=True, verbose_name='Synchronisé')
     registered_by = models.ForeignKey(
         'accounts.User',
         on_delete=models.SET_NULL,
         related_name='registered_producers',
         blank=True,
         null=True,
-        verbose_name='Enregistre par'
+        verbose_name='Enregistré par'
     )
-    
+
     class Meta:
         verbose_name = 'Producteur'
         verbose_name_plural = 'Producteurs'
         ordering = ['-created_at']
 
-    CODE_PATTERN = re.compile(r'^PRD-REG(\d{2})-DIS(\d{3})-(\d{4})$')
-    CODE_PREFIX = 'PRD'
+    CODE_PATTERN = re.compile(r'^[A-Z]+-\d{3,}$')
+    CODE_PREFIX = 'ABDP'
 
     @classmethod
     def is_valid_code(cls, code):
         return bool(code and cls.CODE_PATTERN.match(code or ''))
 
     @classmethod
-    def generate_next_code(cls, region, district):
-        """Compute the next available producer code for the given region+district.
+    def generate_next_code(cls):
+        """Generate the next available ABDP-style code (e.g. ``ABDP-001``).
 
-        The sequence is derived from the highest existing sequence number already
-        used for that region+district, so deleted numbers are never reused and the
-        numbering stays strictly increasing. The region row is locked (on engines
-        that support it) to prevent two concurrent insertions from generating the
-        same code.
+        The sequence is derived from the highest existing sequence number so
+        that deleted numbers are never reused.
         """
-        if not region:
-            raise ValueError("La région est requise pour générer un code producteur.")
-        if not district:
-            raise ValueError("Le district est requis pour générer un code producteur.")
+        max_seq = 0
+        for producer in cls.objects.all():
+            match = cls.CODE_PATTERN.match(producer.code or '')
+            if match:
+                seq = int(producer.code.split('-')[-1])
+                if seq > max_seq:
+                    max_seq = seq
+        return f"{cls.CODE_PREFIX}-{max_seq + 1:03d}"
 
-        with transaction.atomic():
-            if connection.vendor != 'sqlite':
-                Region.objects.select_for_update().filter(pk=region.pk).first()
-                locked = cls.objects.select_for_update().filter(region=region, district=district)
-            else:
-                locked = cls.objects.filter(region=region, district=district)
+    @property
+    def full_name(self):
+        """Full display name combining first and last name."""
+        parts = [self.last_name, self.first_name]
+        return ' '.join(p for p in parts if p).strip() or self.code
 
-            max_seq = 0
-            for producer in locked:
-                match = cls.CODE_PATTERN.match(producer.code or '')
-                if match:
-                    seq = int(match.group(3))
-                    if seq > max_seq:
-                        max_seq = seq
+    @property
+    def name(self):
+        """Display name used by the API and related ``__str__`` methods.
 
-            return f"PRD-REG{region.id:02d}-DIS{district.id:03d}-{max_seq + 1:04d}"
+        The cooperative register stores the member name as separate last/first
+        names, so ``name`` is derived rather than stored.
+        """
+        return self.full_name
 
-    def save(self, *args, **kwargs):
-        if not self.code:
-            if not self.region:
-                raise ValueError("La région est requise pour générer un code producteur.")
-            if not self.district and self.commune and self.commune.district:
-                self.district = self.commune.district
-            if not self.district:
-                raise ValueError("Le district est requis pour générer un code producteur.")
-            self.code = self.generate_next_code(self.region, self.district)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.code} - {self.name}"
-    
     @property
     def parcels_count(self):
         return self.parcels.count()
-    
+
     @property
     def total_area(self):
-        return self.parcels.aggregate(models.Sum('area'))['area__sum'] or 0
-    
+        return self.parcels.aggregate(Sum('area'))['area__sum'] or 0
+
     @property
     def total_plants(self):
-        return self.parcels.aggregate(models.Sum('vanilla_plants'))['vanilla_plants__sum'] or 0
+        return self.parcels.aggregate(Sum('vanilla_plants'))['vanilla_plants__sum'] or 0
+
+    @property
+    def biological_area(self):
+        return self.parcels.filter(conversion_status='organic').aggregate(Sum('area'))['area__sum'] or 0
+
+    @property
+    def conversion_area(self):
+        return self.parcels.filter(conversion_status='conversion').aggregate(Sum('area'))['area__sum'] or 0
+
+    @property
+    def conventional_area(self):
+        return self.parcels.filter(conversion_status='conventional').aggregate(Sum('area'))['area__sum'] or 0
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_next_code()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.code} - {self.full_name}"
 
 
 class ProducerPhoto(TimeStampedModel):
@@ -262,7 +252,7 @@ class ProducerPhoto(TimeStampedModel):
         max_length=200,
         blank=True,
         null=True,
-        verbose_name='Legende'
+        verbose_name='Légende'
     )
     taken_at = models.DateTimeField(
         blank=True,
@@ -300,24 +290,20 @@ class Cooperative(TimeStampedModel):
     address = models.TextField(blank=True, null=True, verbose_name='Adresse')
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Telephone')
     email = models.EmailField(blank=True, null=True, verbose_name='Email')
-    president = models.CharField(max_length=200, blank=True, null=True, verbose_name='President')
+    president = models.CharField(max_length=200, blank=True, null=True, verbose_name='Président')
     registration_number = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        verbose_name='Numero enregistrement'
+        verbose_name='Numéro enregistrement'
     )
     is_active = models.BooleanField(default=True, verbose_name='Actif')
     notes = models.TextField(blank=True, null=True, verbose_name='Notes')
-    
+
     class Meta:
         verbose_name = 'Cooperative'
         verbose_name_plural = 'Cooperatives'
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.code} - {self.name}"
-    
-    @property
-    def members_count(self):
-        return self.members.count()

@@ -35,10 +35,10 @@ class CooperativeSerializer(serializers.ModelSerializer):
 
 class ProducerListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
+    name = serializers.CharField(source='full_name', read_only=True)
     region_name = serializers.CharField(source='region.name', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
     district_name = serializers.SerializerMethodField()
-    cooperative_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     parcels_count = serializers.ReadOnlyField(source='ann_parcels_count')
     total_area = serializers.ReadOnlyField(source='ann_total_area')
@@ -46,45 +46,42 @@ class ProducerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producer
         fields = [
-            'id', 'code', 'name', 'phone', 'region', 'region_name',
-            'district', 'district_name', 'commune', 'commune_name', 'status', 'status_display',
-            'is_certified', 'cooperative', 'cooperative_name',
-            'parcels_count', 'total_area', 'created_at'
+            'id', 'code', 'name', 'last_name', 'first_name', 'unit_name',
+            'phone', 'region', 'region_name',
+            'district', 'district_name', 'commune', 'commune_name', 'fokontany',
+            'status', 'status_display', 'risk_category', 'eu_status', 'nop_status',
+            'joined_at', 'parcels_count', 'total_area', 'created_at'
         ]
 
     def get_district_name(self, obj):
         return obj.district.name if obj.district else None
 
-    def get_cooperative_name(self, obj):
-        return obj.cooperative.name if obj.cooperative else None
-
 
 class ProducerDetailSerializer(serializers.ModelSerializer):
     """Full serializer for detail views"""
+    name = serializers.CharField(source='full_name', read_only=True)
     region_name = serializers.CharField(source='region.name', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
     district_name = serializers.SerializerMethodField()
     fokontany_name = serializers.SerializerMethodField()
-    cooperative_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     registered_by_name = serializers.SerializerMethodField()
     parcels_count = serializers.ReadOnlyField(source='ann_parcels_count')
     total_area = serializers.ReadOnlyField(source='ann_total_area')
     total_plants = serializers.ReadOnlyField(source='ann_total_plants')
-    
+
     class Meta:
         model = Producer
         fields = [
-            'id', 'code', 'name', 'gender', 'gender_display', 'birth_date',
-            'cin', 'phone', 'phone_secondary', 'email',
-            'region', 'region_name', 'district', 'district_name',
-            'commune', 'commune_name', 'fokontany', 'fokontany_name', 'address',
-            'status', 'status_display', 'is_certified',
-            'certification_date', 'certification_number', 'certification_expiry',
-            'cooperative', 'cooperative_name', 'photo', 'notes',
-            'joined_at', 'risk_category', 'identified_risks', 'member_processing', 'processing_activities',
-            'last_internal_inspection_at', 'internal_inspector_name', 'last_external_inspection_at', 'eu_status', 'nop_status',
+            'id', 'code', 'name', 'last_name', 'first_name', 'unit_name',
+            'phone', 'region', 'region_name', 'district', 'district_name',
+            'commune', 'commune_name', 'fokontany', 'fokontany_name',
+            'status', 'status_display',
+            'joined_at', 'risk_category', 'identified_risks',
+            'member_processing', 'processing_activities',
+            'last_internal_inspection_at', 'internal_inspector_name',
+            'last_external_inspection_at', 'eu_status', 'nop_status',
+            'exclusion_reason', 'exclusion_date',
             'registered_by', 'registered_by_name',
             'parcels_count', 'total_area', 'total_plants',
             'created_at', 'updated_at'
@@ -99,9 +96,6 @@ class ProducerDetailSerializer(serializers.ModelSerializer):
 
     def get_fokontany_name(self, obj):
         return obj.fokontany.name if obj.fokontany else None
-
-    def get_cooperative_name(self, obj):
-        return obj.cooperative.name if obj.cooperative else None
 
 
 class ProducerCreateUpdateSerializer(serializers.ModelSerializer):
@@ -119,12 +113,12 @@ class ProducerCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producer
         fields = [
-            'name', 'gender', 'birth_date', 'cin',
-            'phone', 'phone_secondary', 'email',
-            'region', 'commune', 'district', 'fokontany', 'address',
-            'status', 'is_certified', 'certification_date',
-            'certification_number', 'certification_expiry',
-            'cooperative', 'photo', 'notes'
+            'last_name', 'first_name', 'unit_name',
+            'phone', 'region', 'commune', 'district', 'fokontany',
+            'joined_at', 'status', 'risk_category', 'identified_risks',
+            'member_processing', 'processing_activities',
+            'eu_status', 'nop_status',
+            'exclusion_reason', 'exclusion_date',
         ]
         read_only_fields = ['id', 'code', 'created_at', 'updated_at']
 

@@ -18,30 +18,37 @@ const API_URL = API_BASE_URL
 export interface Producer {
   id: number
   code: string
-  name: string
+  last_name: string
+  first_name?: string | null
+  unit_name?: string | null
+  phone?: string | null
   region: number
   region_name?: string
-  district?: number
-  district_name?: string
+  district?: number | null
+  district_name?: string | null
   commune: number
   commune_name?: string
-  fokontany?: number
-  phone: string | null
-  email?: string | null
-  cin?: string | null
-  status: 'active' | 'pending' | 'inactive' | 'suspended'
-  is_certified: boolean
-  certification_date?: string | null
-  certification_number?: string | null
-  certification_expiry?: string | null
-  cooperative?: number | null
-  cooperative_name?: string | null
+  fokontany?: number | null
+  joined_at?: string | null
+  risk_category?: 'low' | 'medium' | 'high' | null
+  identified_risks?: string | null
+  member_processing?: 'yes' | 'no' | null
+  processing_activities?: string | null
+  last_internal_inspection_at?: string | null
+  internal_inspector_name?: string | null
+  last_external_inspection_at?: string | null
+  eu_status?: 'active' | 'suspended' | 'withdrawn' | 'abandoned' | null
+  nop_status?: 'active' | 'suspended' | 'abandoned' | null
+  status: 'active' | 'inactive' | 'suspended' | 'pending'
+  synced: boolean
   parcels_count?: number
-  total_surface?: number
-  registered_by?: number
+  total_area?: number
+  total_plants?: number
+  biological_area?: number
+  conversion_area?: number
+  conventional_area?: number
   created_at: string
   updated_at: string
-  last_sync?: string | null
 }
 
 export interface Parcel {
@@ -52,25 +59,24 @@ export interface Parcel {
   producer_code?: string
   region_name?: string
   commune_name?: string
-  fokontany?: string
+  registration_date?: string | null
   area: number
-  vanilla_plants: number
-  tutor_trees: number
-  latitude: string
-  longitude: string
-  altitude?: number | null
   main_crop?: string | null
   intercrop?: string | null
+  vanilla_plants: number
+  bio_location?: 'oui' | 'non' | 'yes' | 'no' | null
+  latitude?: string | null
+  longitude?: string | null
+  conversion_start_date?: string | null
   conversion_status?: 'organic' | 'conversion' | 'conventional' | null
   conversion_level?: 'C1' | 'C2' | 'C3' | null
-  estimated_yield?: number | null
+  last_used_date?: string | null
   eu_status?: string | null
   nop_status?: string | null
-  status: 'active' | 'inactive' | 'fallow' | 'new'
-  status_display?: string
-  verification_date?: string | null
-  verified_by?: number | null
-  notes?: string | null
+  estimated_yield?: number | null
+  actual_harvest?: number | null
+  actual_yield?: number | null
+  delivered_quantity?: number | null
   created_at: string
   updated_at: string
 }
@@ -318,6 +324,56 @@ export const producersApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/producers/export/${query}`, `producteurs_export_${Date.now()}.pdf`)
   },
+}
+
+// Units API
+export interface ProductionUnit {
+  id: number
+  name: string
+  code: string
+  unit_type: 'group' | 'site' | 'village' | 'region'
+  region: number
+  region_name?: string
+  district?: number | null
+  district_name?: string | null
+  commune?: number | null
+  commune_name?: string | null
+  manager_name?: string | null
+  manager_function?: string | null
+  phone?: string | null
+  email?: string | null
+  members_count: number
+  total_area: number
+  creation_date?: string | null
+  status: 'active' | 'inactive' | 'suspended'
+  notes?: string | null
+  producers_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export const unitsApi = {
+  list: (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    return apiFetch<PaginatedResponse<ProductionUnit>>(`/production-units/${query}`)
+  },
+
+  get: (id: number) => apiFetch<ProductionUnit>(`/production-units/${id}/`),
+
+  create: (data: Partial<ProductionUnit>) =>
+    apiFetch<ProductionUnit>('/production-units/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<ProductionUnit>) =>
+    apiFetch<ProductionUnit>(`/production-units/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiFetch<void>(`/production-units/${id}/`, { method: 'DELETE' }),
 }
 
 // Users API

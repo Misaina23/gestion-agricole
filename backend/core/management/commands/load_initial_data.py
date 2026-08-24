@@ -90,8 +90,8 @@ class Command(BaseCommand):
                     commune.district = district
                     commune.save()
 
-        # Agricultural records are intentionally not seeded. Import the
-        # cooperative workbook with `import_vintsy_register` instead.
+        # Agricultural records (producers, parcels, inspections, harvests) are
+        # seeded from the real cooperative register with ``python manage.py seed``.
         
         # Create Vanilla Varieties
         varieties_data = [

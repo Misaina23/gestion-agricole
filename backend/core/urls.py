@@ -8,7 +8,8 @@ from .views import (
     VanillaVarietyViewSet, QualityGradeViewSet, SeasonViewSet,
     SyncLogViewSet, dashboard_stats, dashboard_activity,
     dashboard_sync_status, reference_data, parse_qr_code, generate_qr_code,
-    sig_producers_locations, sig_parcels_polygons, sig_production_zones, import_vintsy_register
+    sig_producers_locations, sig_parcels_polygons, sig_production_zones, import_vintsy_register,
+    ProductionUnitViewSet
 )
 from .search_views import global_search
 from .anomaly_views import detect_anomalies
@@ -27,6 +28,7 @@ router.register(r'varieties', VanillaVarietyViewSet, basename='variety')
 router.register(r'quality-grades', QualityGradeViewSet, basename='quality-grade')
 router.register(r'seasons', SeasonViewSet, basename='season')
 router.register(r'sync-logs', SyncLogViewSet, basename='sync-log')
+router.register(r'production-units', ProductionUnitViewSet, basename='production-unit')
 
 urlpatterns = [
     path('', include(router.urls)),

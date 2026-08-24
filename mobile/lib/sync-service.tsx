@@ -1,8 +1,64 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import NetInfo from '@react-native-community/netinfo';
 import { API_URL, addSyncLog, getPendingRecords, markSynced, clearSynced, normalizeApiUrl } from './db';
 import { request } from './api-client';
+
+// Cached credentials let privileged accounts (super admin, supervisors) reopen
+// the app and work fully offline after they have authenticated once online.
+const SECURE = {
+  email: 'vid_offline_email',
+  password: 'vid_offline_password',
+  role: 'vid_offline_role',
+  token: 'vid_offline_token',
+  userId: 'vid_offline_userid',
+};
+
+async function cacheCredentials(email: string, password: string, role: string, token?: string, userId?: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(SECURE.email, email);
+    await SecureStore.setItemAsync(SECURE.password, password);
+    await SecureStore.setItemAsync(SECURE.role, role);
+    if (token) await SecureStore.setItemAsync(SECURE.token, token);
+    if (userId) await SecureStore.setItemAsync(SECURE.userId, String(userId));
+  } catch {
+    /* secure store unavailable (e.g. web) -> offline login simply disabled */
+  }
+}
+
+async function getCachedCredentials(): Promise<{ email: string; password: string; role: string; token?: string; userId?: string } | null> {
+  try {
+    const email = await SecureStore.getItemAsync(SECURE.email);
+    const password = await SecureStore.getItemAsync(SECURE.password);
+    if (!email || !password) return null;
+    return {
+      email,
+      password,
+      role: (await SecureStore.getItemAsync(SECURE.role)) || 'admin',
+      token: await SecureStore.getItemAsync(SECURE.token) || undefined,
+      userId: await SecureStore.getItemAsync(SECURE.userId) || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const restoreFromCache = async (
+  setUser: (u: User | null) => void,
+  email: string,
+  role: string,
+  token?: string,
+  userId?: string,
+): Promise<void> => {
+  const validRoles: UserRole[] = ['agent', 'supervisor', 'admin'];
+  const userRole = validRoles.includes(role as UserRole) ? (role as UserRole) : 'admin';
+  await AsyncStorage.setItem('user_token', token || '');
+  await AsyncStorage.setItem('user_email', email);
+  await AsyncStorage.setItem('user_role', userRole);
+  if (userId) await AsyncStorage.setItem('user_id', userId);
+  setUser({ id: userId ? parseInt(userId, 10) : 0, email, role: userRole, token: token || '' });
+};
 
 export type UserRole = 'agent' | 'supervisor' | 'admin';
 
@@ -112,6 +168,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: userRole,
           token,
         });
+        return;
+      }
+
+      // Offline restore: a privileged user who authenticated online before can
+      // reopen the app without a network connection.
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) {
+        const cached = await getCachedCredentials();
+        if (cached && cached.email) {
+          await restoreFromCache(setUser, cached.email, cached.role, cached.token, cached.userId);
+        }
       }
     } catch (error) {
       console.error('Failed to load user', error);
@@ -140,8 +207,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem('user_role', userRole);
       if (data.user_id) await AsyncStorage.setItem('user_id', String(data.user_id));
       await AsyncStorage.setItem('refresh_token', data.refresh || '');
+      await cacheCredentials(email, password, userRole, data.access, data.user_id ? String(data.user_id) : undefined);
       return { success: true };
     } catch (error: any) {
+      // Offline fallback: if the server is unreachable, a privileged user who
+      // authenticated online before can still sign in using cached credentials.
+      const netInfo = await NetInfo.fetch();
+      const cached = await getCachedCredentials();
+      if (!netInfo.isConnected && cached && cached.email === email && cached.password === password) {
+        await restoreFromCache(setUser, cached.email, cached.role, cached.token, cached.userId);
+        return { success: true };
+      }
       return { success: false, error: error?.message || 'Connexion échouée' };
     }
   };

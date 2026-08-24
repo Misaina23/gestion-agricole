@@ -19,6 +19,7 @@ import {
   Settings,
   Bot,
   History,
+  Warehouse,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/lib/language-context"
@@ -38,6 +39,7 @@ type NavigationItem = { icon: typeof LayoutDashboard; labelKey: string; id: stri
 const navigationItems: NavigationItem[] = [
   { icon: LayoutDashboard, labelKey: "overview", id: "overview" },
   { icon: Users, labelKey: "producers", id: "producers" },
+  { icon: Warehouse, labelKey: "units", id: "units" },
   { icon: Map, labelKey: "parcelsGps", id: "parcels" },
   { icon: MapPin, labelKey: "parcelsMap", id: "map" },
   { icon: BarChart3, labelKey: "productions", id: "productions" },

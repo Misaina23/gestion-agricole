@@ -452,7 +452,7 @@ class MonthlyReportViewSet(viewsets.ModelViewSet):
             report_data['kpis']['producers'] = {
                 'total': producers.count(),
                 'active': producers.filter(status='active').count(),
-                'certified': producers.filter(is_certified=True).count(),
+                'certified': producers.filter(parcels__conversion_status='organic').distinct().count(),
                 'pending': producers.filter(status='pending').count(),
             }
 

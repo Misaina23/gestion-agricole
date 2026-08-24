@@ -205,7 +205,7 @@ export function CampaignsPage() {
     const assignedIds = new Set((assignedProducers || []).map((a) => a.producer))
     return (allActiveProducers || []).filter((p: Producer) => {
       if (assignedIds.has(p.id)) return false
-      const matchesSearch = !q || `${p.name} ${p.code}`.toLowerCase().includes(q)
+      const matchesSearch = !q || `${[p.last_name, p.first_name].filter(Boolean).join(' ') || p.code} ${p.code}`.toLowerCase().includes(q)
       const matchesRegion =
         producerRegionFilter === 'all' ||
         String(p.region) === producerRegionFilter ||
@@ -876,7 +876,7 @@ export function CampaignsPage() {
                     ) : (
                       visibleProducers.map((producer: Producer) => (
                         <SelectItem key={producer.id} value={producer.id.toString()}>
-                          {producer.code} - {producer.name}
+                          {producer.code} - {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
                         </SelectItem>
                       ))
                     )}

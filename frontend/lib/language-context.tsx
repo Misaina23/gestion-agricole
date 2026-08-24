@@ -71,6 +71,7 @@ type TranslationDictionary = {
   workflows: string;
   anomalies: string;
   history: string;
+  units: string;
   administration: string;
   users: string;
   settings: string;
@@ -219,6 +220,7 @@ const fr: TranslationDictionary = {
   workflows: "Workflows",
   anomalies: "Anomalies",
   history: "Historique",
+  units: "Unités de production",
   administration: "Administration",
   users: "Utilisateurs",
   settings: "Paramètres",
@@ -366,6 +368,7 @@ const en: TranslationDictionary = {
   workflows: "Workflows",
   anomalies: "Anomalies",
   history: "History",
+  units: "Production Units",
   administration: "Administration",
   users: "Users",
   settings: "Settings",

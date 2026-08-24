@@ -39,7 +39,6 @@ def detect_anomalies(request):
         'invalid_gps': [],
         'duplicate_codes': [],
         'abnormal_areas': [],
-        'odd_ages': [],
     }
     
     # Invalid phone numbers
@@ -75,19 +74,6 @@ def detect_anomalies(request):
                 })
         except (TypeError, ValueError):
             pass
-    
-    # Odd ages (birth dates suggesting age < 10 or > 120)
-    from datetime import date
-    today = date.today()
-    for p in Producer.objects.exclude(birth_date__isnull=True):
-        age = today.year - p.birth_date.year - ((today.month, today.day) < (p.birth_date.month, p.birth_date.day))
-        if age < 10 or age > 120:
-            anomalies['odd_ages'].append({
-                'id': p.id,
-                'name': p.name,
-                'birth_date': p.birth_date.isoformat(),
-                'calculated_age': age
-            })
     
     # Duplicate codes
     from django.db.models import Count

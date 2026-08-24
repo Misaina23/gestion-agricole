@@ -7,8 +7,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from django.db.models import Avg, Count, F, Q, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Avg, Count, F, Q, Sum, Value
+from django.db.models.functions import TruncMonth, Concat
 from django.utils import timezone
 from django.core.management import call_command
 from django.core.files.storage import default_storage
@@ -17,11 +17,11 @@ from io import StringIO
 import os
 from datetime import timedelta, date
 
-from .models import Region, Commune, District, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog
+from .models import Region, Commune, District, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog, ProductionUnit
 from .serializers import (
     RegionSerializer, CommuneSerializer, DistrictSerializer, FokontanySerializer,
     VanillaVarietySerializer, QualityGradeSerializer, SeasonSerializer,
-    SyncLogSerializer
+    SyncLogSerializer, ProductionUnitSerializer
 )
 
 
@@ -196,12 +196,15 @@ def dashboard_stats(request):
     )
     parcel_stats = {
         'total': parcel_agg['total'],
-        'active': parcel_agg['active'],
-        'inactive': parcel_agg['inactive'],
-        'fallow': parcel_agg['fallow'],
-        'new': parcel_agg['new'],
-        'total_surface': float(parcel_agg['total_surface'] or 0),
-        'total_vanilla_trees': parcel_agg['total_vanilla_trees'] or 0,
+        'total_area': float(parcel_agg['total_surface'] or 0),
+        'total_plants': parcel_agg['total_vanilla_trees'] or 0,
+        'certified': parcels_qs.filter(conversion_status='organic').count(),
+        'by_status': {
+            'active': parcel_agg['active'],
+            'inactive': parcel_agg['inactive'],
+            'fallow': parcel_agg['fallow'],
+            'new': parcel_agg['new'],
+        },
         'by_conversion_status': {
             row['conversion_status']: {'count': row['count'], 'area': float(row['area'] or 0)}
             for row in parcels_qs.exclude(conversion_status__isnull=True).values('conversion_status').annotate(count=Count('id'), area=Sum('area'))
@@ -334,7 +337,10 @@ def dashboard_stats(request):
 
     recent_producers = list(
         producers_qs.select_related('region')
-        .annotate(parcels_count=Count('parcels__id'))
+        .annotate(
+            parcels_count=Count('parcels__id'),
+            name=Concat('last_name', Value(' '), 'first_name'),
+        )
         .order_by('-created_at')[:4]
         .values('id', 'code', 'name', 'status', 'parcels_count', 'created_at', region_name=F('region__name'))
     )
@@ -514,7 +520,7 @@ def import_vintsy_register(request):
     path = default_storage.path(name)
     output = StringIO()
     try:
-        call_command('load_vintsy_register_fast', path, stdout=output)
+        call_command('import_excel', path, stdout=output)
     except Exception as exc:
         return Response({'detail': f'Échec de l’import : {exc}'}, status=status.HTTP_400_BAD_REQUEST)
     finally:
@@ -538,7 +544,7 @@ def parse_qr_code(request):
         from producers.serializers import ProducerDetailSerializer
         from producers.models import Producer
         try:
-            producer = Producer.objects.select_related('region', 'commune', 'fokontany', 'cooperative').get(code__iexact=code_value)
+            producer = Producer.objects.select_related('region', 'commune', 'fokontany').get(code__iexact=code_value)
         except Producer.DoesNotExist:
             return Response({'error': 'Producteur introuvable', 'type': qr_type, 'code': code_value}, status=status.HTTP_404_NOT_FOUND)
         data = ProducerDetailSerializer(producer).data
@@ -550,9 +556,6 @@ def parse_qr_code(request):
             'region': producer.region.name if producer.region else None,
             'commune': producer.commune.name if producer.commune else None,
             'fokontany': producer.fokontany.name if producer.fokontany else None,
-            'address': producer.address,
-            'gender': producer.gender,
-            'cin': producer.cin,
             'parcels': [
                 {
                     'code': p.code,
@@ -696,3 +699,14 @@ def sig_production_zones(request):
         }
         for z in zones
     ])
+
+
+class ProductionUnitViewSet(viewsets.ModelViewSet):
+    """ViewSet for Production Unit"""
+    queryset = ProductionUnit.objects.select_related('region', 'district', 'commune').all()
+    serializer_class = ProductionUnitSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['region', 'district', 'commune', 'unit_type', 'status']
+    search_fields = ['name', 'code', 'manager_name', 'phone', 'email']

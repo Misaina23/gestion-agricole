@@ -15,6 +15,7 @@ import { ProducersTable } from "@/components/dashboard/producers-table"
 import { SyncStatus } from "@/components/dashboard/sync-status"
 import { ProducersPage } from "@/components/dashboard/producers-page"
 import { ParcelsPage } from "@/components/dashboard/parcels-page"
+import { UnitsPage } from "@/components/dashboard/units-page"
 import { ProductionsPage } from "@/components/dashboard/productions-page"
 import { InspectionsPage } from "@/components/dashboard/inspections-page"
 import { UsersPage } from "@/components/dashboard/users-page"
@@ -94,6 +95,8 @@ function DashboardContent() {
         return <ParcelsMapPage />
       case "parcels":
         return <ParcelsPage />
+      case "units":
+        return <UnitsPage />
       case "productions":
         return <ProductionsPage />
       case "inspections":

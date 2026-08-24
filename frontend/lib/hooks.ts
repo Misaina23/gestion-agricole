@@ -233,6 +233,27 @@ export function useParcel(id: number | null) {
   }
 }
 
+export function useUnits(params?: Record<string, string>) {
+  const query = params ? `?${new URLSearchParams(params)}` : ''
+  const key = `/production-units/${query}`
+
+  const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<any>>(
+    key,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+    }
+  )
+
+  return {
+    units: data?.results || [],
+    total: data?.count || 0,
+    isLoading,
+    error,
+    refresh,
+  }
+}
+
 export function useUsers(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/accounts/users/${query}`
@@ -612,6 +633,10 @@ export function invalidateProducers() {
 
 export function invalidateParcels() {
   mutate((key: string) => typeof key === 'string' && key.startsWith('/parcels/'), undefined, { revalidate: true })
+}
+
+export function invalidateUnits() {
+  mutate((key: string) => typeof key === 'string' && key.startsWith('/production-units/'), undefined, { revalidate: true })
 }
 
 export function invalidateProductions() {

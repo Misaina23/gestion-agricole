@@ -1,6 +1,5 @@
-﻿"use client"
+"use client"
 
-// @ts-nocheck
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import {
@@ -15,6 +14,7 @@ import {
   MoreHorizontal,
   MapPin,
   Phone,
+  Mail,
   Calendar,
   Loader2,
   CheckCircle,
@@ -29,14 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
   Table,
   TableBody,
   TableCell,
@@ -45,24 +37,53 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useProducers, invalidateProducers, useRegions, useDistricts, useCommunes, useProducer, useParcels } from "@/lib/hooks"
-import { producersApi, type Producer, type Parcel } from "@/lib/api"
+import { useUnits, invalidateUnits, useRegions, useDistricts, useCommunes } from "@/lib/hooks"
+import { unitsApi, type ProductionUnit } from "@/lib/api"
+import useSWR from 'swr'
+import { API_BASE_URL, buildApiUrl, getAuthHeaders } from "@/lib/api-config"
+
+const fetcher = async (url: string) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_tokens') : null
+  const headers: Record<string, string> = {}
+  if (token) {
+    const parsed = JSON.parse(token)
+    headers['Authorization'] = `Bearer ${parsed.access}`
+  }
+  const response = await fetch(buildApiUrl(url), { headers })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.json()
+}
 import { toast } from "sonner"
 import { useLanguage } from "@/lib/language-context"
 import { confirmDelete, successAlert, errorAlert } from "@/lib/sweetalert"
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   active: { label: "Actif", class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  pending: { label: "En attente", class: "bg-amber-100 text-amber-700 border-amber-200" },
-  inactive: { label: "Inactif", class: "bg-red-100 text-red-700 border-red-200" },
+  inactive: { label: "Inactif", class: "bg-gray-100 text-gray-700 border-gray-200" },
+  suspended: { label: "Suspendu", class: "bg-red-100 text-red-700 border-red-200" },
 }
 
-export function ProducersPage() {
+const unitTypeLabels: Record<string, string> = {
+  group: "Groupe",
+  site: "Site",
+  village: "Village",
+  region: "Region",
+}
+
+export function UnitsPage() {
   const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -72,44 +93,50 @@ export function ProducersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [selectedProducer, setSelectedProducer] = useState<Producer | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<ProductionUnit | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [producerParcels, setProducerParcels] = useState<Parcel[]>([])
-  const [isLoadingParcels, setIsLoadingParcels] = useState(false)
 
-  type ProducerFormData = {
-    last_name: string
-    first_name: string
-    unit_name: string
+  type UnitFormData = {
+    name: string
+    code: string
+    unit_type: ProductionUnit['unit_type']
     region: string
     district: string
     commune: string
+    manager_name: string
+    manager_function: string
     phone: string
-    joined_at: string
-    risk_category: string
-    member_processing: string
-    status: Producer['status']
+    email: string
+    members_count: string
+    total_area: string
+    creation_date: string
+    status: ProductionUnit['status']
+    notes: string
   }
 
-  const [formData, setFormData] = useState<ProducerFormData>({
-    last_name: "",
-    first_name: "",
-    unit_name: "",
+  const [formData, setFormData] = useState<UnitFormData>({
+    name: "",
+    code: "",
+    unit_type: "group",
     region: "",
     district: "",
     commune: "",
+    manager_name: "",
+    manager_function: "",
     phone: "",
-    joined_at: "",
-    risk_category: "low",
-    member_processing: "no",
-    status: "pending",
+    email: "",
+    members_count: "0",
+    total_area: "0",
+    creation_date: "",
+    status: "active",
+    notes: "",
   })
 
   const searchParams = useSearchParams()
-  const producerQueryId = searchParams.get('producer')
-  const producerAction = searchParams.get('action')
-  const isQueryProducer = producerQueryId ? Number(producerQueryId) : null
-  const { producer: queryProducer, isLoading: isLoadingQueryProducer } = useProducer(isQueryProducer)
+  const unitQueryId = searchParams.get('unit')
+  const unitAction = searchParams.get('action')
+  const isQueryUnit = unitQueryId ? Number(unitQueryId) : null
+  const { unit: queryUnit, isLoading: isLoadingQueryUnit } = useUnit(isQueryUnit)
 
   const { regions } = useRegions()
   const selectedRegionId = formData.region ? Number(formData.region) : undefined
@@ -123,7 +150,7 @@ export function ProducersPage() {
   if (regionFilter && regionFilter !== "all" && regionFilter !== "undefined") params.region = regionFilter
   params.page = currentPage.toString()
 
-  const { producers, total, isLoading, error, refresh } = useProducers(params)
+  const { units, total, isLoading, error, refresh } = useUnits(params)
   const totalPages = Math.max(1, Math.ceil((total || 0) / 4))
 
   useEffect(() => {
@@ -132,149 +159,155 @@ export function ProducersPage() {
 
   const resetAddForm = () => {
     setFormData({
-      last_name: "",
-      first_name: "",
-      unit_name: "",
+      name: "",
+      code: "",
+      unit_type: "group",
       region: regions[0]?.id?.toString() || "",
       district: "",
       commune: "",
+      manager_name: "",
+      manager_function: "",
       phone: "",
-      joined_at: "",
-      risk_category: "low",
-      member_processing: "no",
-      status: "pending",
+      email: "",
+      members_count: "0",
+      total_area: "0",
+      creation_date: "",
+      status: "active",
+      notes: "",
     })
   }
 
   const handleAdd = async () => {
-    if (!formData.last_name.trim() || !formData.region || !formData.commune) {
-      toast.error("Le nom, la région et la commune sont obligatoires")
+    if (!formData.name.trim() || !formData.code.trim() || !formData.region || !formData.commune) {
+      toast.error("Le nom, le code, la région et la commune sont obligatoires")
       return
     }
 
     setIsSubmitting(true)
     try {
       const payload = {
-        last_name: formData.last_name.trim(),
-        first_name: formData.first_name.trim() || undefined,
-        unit_name: formData.unit_name.trim() || undefined,
+        name: formData.name.trim(),
+        code: formData.code.trim(),
+        unit_type: formData.unit_type as ProductionUnit['unit_type'],
         region: Number(formData.region),
         district: formData.district ? Number(formData.district) : undefined,
         commune: Number(formData.commune),
+        manager_name: formData.manager_name.trim() || undefined,
+        manager_function: formData.manager_function.trim() || undefined,
         phone: formData.phone.trim() || undefined,
-        joined_at: formData.joined_at || undefined,
-        risk_category: (formData.risk_category || undefined) as any,
-        member_processing: (formData.member_processing || undefined) as any,
+        email: formData.email.trim() || undefined,
+        members_count: parseInt(formData.members_count) || 0,
+        total_area: parseFloat(formData.total_area) || 0,
+        creation_date: formData.creation_date || undefined,
         status: formData.status,
+        notes: formData.notes.trim() || undefined,
       }
-      await producersApi.create(payload as any)
-      toast.success("Producteur ajouté avec succès")
+      await unitsApi.create(payload as any)
+      toast.success("Unité ajoutée avec succès")
       resetAddForm()
       setIsAddDialogOpen(false)
-      invalidateProducers()
+      invalidateUnits()
       refresh()
     } catch (error: any) {
-      console.error('Producer create failed', error)
-      toast.error(error?.message || "Erreur lors de l'ajout du producteur")
+      console.error('Unit create failed', error)
+      toast.error(error?.message || "Erreur lors de l'ajout de l'unité")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleEdit = async () => {
-    if (!selectedProducer) return
-    if (!formData.last_name.trim() || !formData.region || !formData.commune) {
-      toast.error("Le nom, la région et la commune sont obligatoires")
+    if (!selectedUnit) return
+    if (!formData.name.trim() || !formData.code.trim() || !formData.region || !formData.commune) {
+      toast.error("Le nom, le code, la région et la commune sont obligatoires")
       return
     }
     setIsSubmitting(true)
     try {
-      await producersApi.update(selectedProducer.id, {
-        last_name: formData.last_name,
-        first_name: formData.first_name || undefined,
-        unit_name: formData.unit_name || undefined,
+      await unitsApi.update(selectedUnit.id, {
+        name: formData.name.trim(),
+        code: formData.code.trim(),
+        unit_type: formData.unit_type as ProductionUnit['unit_type'],
         region: Number(formData.region),
         district: formData.district ? Number(formData.district) : undefined,
         commune: Number(formData.commune),
-        phone: formData.phone || undefined,
-        joined_at: formData.joined_at || undefined,
-        risk_category: (formData.risk_category || undefined) as any,
-        member_processing: (formData.member_processing || undefined) as any,
+        manager_name: formData.manager_name.trim() || undefined,
+        manager_function: formData.manager_function.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        members_count: parseInt(formData.members_count) || 0,
+        total_area: parseFloat(formData.total_area) || 0,
+        creation_date: formData.creation_date || undefined,
         status: formData.status,
+        notes: formData.notes.trim() || undefined,
       } as any)
-      toast.success("Producteur modifié avec succès")
+      toast.success("Unité modifiée avec succès")
       setIsEditDialogOpen(false)
-      setSelectedProducer(null)
-      invalidateProducers()
+      setSelectedUnit(null)
+      invalidateUnits()
       refresh()
     } catch {
-      toast.error("Erreur lors de la modification du producteur")
+      toast.error("Erreur lors de la modification de l'unité")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!selectedProducer) return
+    if (!selectedUnit) return
     setIsSubmitting(true)
     try {
-      await producersApi.delete(selectedProducer.id)
-      successAlert("Suppression réussie", "Le producteur a été supprimé.")
-      setSelectedProducer(null)
-      invalidateProducers()
+      await unitsApi.delete(selectedUnit.id)
+      successAlert("Suppression réussie", "L'unité a été supprimée.")
+      setSelectedUnit(null)
+      invalidateUnits()
       refresh()
     } catch {
-      errorAlert("Erreur", "Impossible de supprimer le producteur.")
+      errorAlert("Erreur", "Impossible de supprimer l'unité.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const openEditDialog = (producer: Producer) => {
-    setSelectedProducer(producer)
+  const openEditDialog = (unit: ProductionUnit) => {
+    setSelectedUnit(unit)
     setFormData({
-      last_name: producer.last_name || "",
-      first_name: producer.first_name || "",
-      unit_name: producer.unit_name || "",
-      region: producer.region?.toString() || "",
-      district: producer.district?.toString() || "",
-      commune: producer.commune?.toString() || "",
-      phone: producer.phone || "",
-      joined_at: producer.joined_at || "",
-      risk_category: producer.risk_category || "low",
-      member_processing: producer.member_processing || "no",
-      status: producer.status,
+      name: unit.name,
+      code: unit.code,
+      unit_type: unit.unit_type || "group",
+      region: unit.region?.toString() || "",
+      district: unit.district?.toString() || "",
+      commune: unit.commune?.toString() || "",
+      manager_name: unit.manager_name || "",
+      manager_function: unit.manager_function || "",
+      phone: unit.phone || "",
+      email: unit.email || "",
+      members_count: (unit.members_count || 0).toString(),
+      total_area: (unit.total_area || 0).toString(),
+      creation_date: unit.creation_date || "",
+      status: unit.status,
+      notes: unit.notes || "",
     })
     setIsEditDialogOpen(true)
   }
 
   useEffect(() => {
-    if (producerAction === 'view' && queryProducer) {
-      openViewDialog(queryProducer)
+    if (unitAction === 'view' && queryUnit) {
+      openViewDialog(queryUnit)
     }
-    if (producerAction === 'edit' && queryProducer) {
-      openEditDialog(queryProducer)
+    if (unitAction === 'edit' && queryUnit) {
+      openEditDialog(queryUnit)
     }
-  }, [producerAction, queryProducer])
+  }, [unitAction, queryUnit])
 
-  const openViewDialog = async (producer: Producer) => {
-    setSelectedProducer(producer)
-    setIsLoadingParcels(true)
-    setProducerParcels([])
+  const openViewDialog = (unit: ProductionUnit) => {
+    setSelectedUnit(unit)
     setIsViewDialogOpen(true)
-    try {
-      const data = await producersApi.parcels(producer.id)
-      setProducerParcels(data)
-    } catch {
-      setProducerParcels([])
-    } finally {
-      setIsLoadingParcels(false)
-    }
   }
 
-  const openDeleteDialog = (producer: Producer) => {
-    setSelectedProducer(producer)
-    confirmDelete("Le producteur et ses données liées seront définitivement supprimés.").then((ok) => {
+  const openDeleteDialog = (unit: ProductionUnit) => {
+    setSelectedUnit(unit)
+    confirmDelete("L'unité et ses données liées seront définitivement supprimés.").then((ok) => {
       if (ok) handleDelete()
     })
   }
@@ -282,7 +315,7 @@ export function ProducersPage() {
   const handleExportExcel = async () => {
     setIsExporting(true)
     try {
-      await producersApi.exportExcel(params)
+      await unitsApi.list(params)
       toast.success("Export Excel réussi")
     } catch {
       toast.error("Erreur lors de l'export Excel")
@@ -291,26 +324,14 @@ export function ProducersPage() {
     }
   }
 
-  const handleExportPdf = async () => {
-    setIsExporting(true)
+  const handleActivate = async (unit: ProductionUnit) => {
     try {
-      await producersApi.exportPdf(params)
-      toast.success("Export PDF réussi")
-    } catch {
-      toast.error("Erreur lors de l'export PDF")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleActivate = async (producer: Producer) => {
-    try {
-      await producersApi.activate(producer.id)
-      toast.success("Producteur activé avec succès")
-      invalidateProducers()
+      await unitsApi.update(unit.id, { status: 'active' })
+      toast.success("Unité activée avec succès")
+      invalidateUnits()
       refresh()
     } catch {
-      toast.error("Erreur lors de l'activation du producteur")
+      toast.error("Erreur lors de l'activation de l'unité")
     }
   }
 
@@ -330,30 +351,22 @@ export function ProducersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0a1628] dark:text-foreground">Gestion des Producteurs</h1>
+          <h1 className="text-2xl font-bold text-[#0a1628] dark:text-foreground">Unités de Production</h1>
           <p className="mt-1 text-sm text-[#5a7a9a] dark:text-muted-foreground">
-            {total} producteur{total !== 1 ? "s" : ""} enregistré{total !== 1 ? "s" : ""}
+            {total} unité{total !== 1 ? "s" : ""} enregistrée{total !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 border-[#c5ddf5] text-[#1e3a5f] hover:bg-[#e8f4fc] dark:border-border dark:text-foreground dark:hover:bg-accent/40">
-                <Download className="w-4 h-4" />
-                Générer
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPdf} disabled={isExporting}>PDF</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="outline" className="gap-2 border-[#c5ddf5] text-[#1e3a5f] hover:bg-[#e8f4fc] dark:border-border dark:text-foreground dark:hover:bg-accent/40" onClick={handleExportExcel} disabled={isExporting}>
+            <Download className="w-4 h-4" />
+            Exporter
+          </Button>
           <Button className="gap-2 bg-[#1e3a5f] text-white hover:bg-[#2d5a87] dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90" onClick={() => {
             resetAddForm()
             setIsAddDialogOpen(true)
           }}>
             <Plus className="w-4 h-4" />
-            Nouveau Producteur
+            Nouvelle Unité
           </Button>
         </div>
       </div>
@@ -364,7 +377,7 @@ export function ProducersPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a7a9a]" />
             <Input
-              placeholder="Rechercher par nom, code ou commune..."
+              placeholder="Rechercher par nom, code ou responsable..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 border-[#c5ddf5] focus:border-[#87ceeb]"
@@ -379,8 +392,8 @@ export function ProducersPage() {
               <SelectContent>
                 <SelectItem value="all">Tous statuts</SelectItem>
                 <SelectItem value="active">Actif</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
                 <SelectItem value="inactive">Inactif</SelectItem>
+                <SelectItem value="suspended">Suspendu</SelectItem>
               </SelectContent>
             </Select>
             <Select value={regionFilter} onValueChange={setRegionFilter}>
@@ -413,37 +426,35 @@ export function ProducersPage() {
               <TableRow className="bg-muted/80 hover:bg-muted/80 dark:bg-muted/70 dark:hover:bg-muted/70">
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Code</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Nom</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Type</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Région</TableHead>
-                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Commune</TableHead>
-                <TableHead className="text-center font-semibold text-[#1e3a5f] dark:text-foreground">Parcelles</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Responsable</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Membres</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Surface</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Statut</TableHead>
                 <TableHead className="text-right font-semibold text-[#1e3a5f] dark:text-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {producers.length === 0 ? (
+              {units.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-[#5a7a9a]">
-                    Aucun producteur trouvé
+                  <TableCell colSpan={9} className="text-center py-8 text-[#5a7a9a]">
+                    Aucune unité trouvée
                   </TableCell>
                 </TableRow>
               ) : (
-                producers.map((producer) => (
-                  <TableRow key={producer.id} className="hover:bg-muted/50 dark:hover:bg-muted/60">
-                    <TableCell className="font-mono text-sm text-[#1e3a5f] dark:text-foreground">{producer.code}</TableCell>
-                    <TableCell className="font-medium text-[#0a1628] dark:text-foreground">
-                      {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
-                    </TableCell>
-                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{producer.region_name || producer.region}</TableCell>
-                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{producer.commune_name || producer.commune}</TableCell>
-                    <TableCell className="text-center">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground dark:bg-muted/80 dark:text-foreground">
-                        {producer.parcels_count || 0}
-                      </span>
-                    </TableCell>
+                units.map((unit) => (
+                  <TableRow key={unit.id} className="hover:bg-muted/50 dark:hover:bg-muted/60">
+                    <TableCell className="font-mono text-sm text-[#1e3a5f] dark:text-foreground">{unit.code}</TableCell>
+                    <TableCell className="font-medium text-[#0a1628] dark:text-foreground">{unit.name}</TableCell>
+                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{unitTypeLabels[unit.unit_type] || unit.unit_type}</TableCell>
+                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{unit.region_name || '-'}</TableCell>
+                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{unit.manager_name || '-'}</TableCell>
+                    <TableCell className="text-center text-[#0a1628] dark:text-foreground">{unit.members_count || 0}</TableCell>
+                    <TableCell className="text-[#0a1628] dark:text-foreground">{(unit.total_area || 0).toLocaleString('fr-FR')} ha</TableCell>
                     <TableCell>
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[producer.status]?.class || statusConfig.pending.class}`}>
-                        {statusConfig[producer.status]?.label || producer.status}
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[unit.status]?.class || statusConfig.active.class}`}>
+                        {statusConfig[unit.status]?.label || unit.status}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -454,20 +465,20 @@ export function ProducersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openViewDialog(producer)}>
+                          <DropdownMenuItem onClick={() => openViewDialog(unit)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Voir détails
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(producer)}>
+                          <DropdownMenuItem onClick={() => openEditDialog(unit)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(producer)} className="text-red-600">
+                          <DropdownMenuItem onClick={() => openDeleteDialog(unit)} className="text-red-600">
                             <Trash2 className="w-4 h-4 mr-2" />
                             Supprimer
                           </DropdownMenuItem>
-                          {producer.status === 'pending' && (
-                            <DropdownMenuItem onClick={() => handleActivate(producer)}>
+                          {unit.status !== 'active' && (
+                            <DropdownMenuItem onClick={() => handleActivate(unit)}>
                               <CheckCircle className="w-4 h-4 mr-2" />
                               Activer
                             </DropdownMenuItem>
@@ -517,37 +528,42 @@ export function ProducersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Users className="w-5 h-5" />
-              Nouveau Producteur
+              Nouvelle Unité
             </DialogTitle>
-            <DialogDescription>Remplissez les informations du nouveau producteur</DialogDescription>
+            <DialogDescription>Remplissez les informations de la nouvelle unité</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Nom du membre *</label>
+              <label className="text-sm font-medium text-[#0a1628]">Nom de l'unité *</label>
               <Input
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                placeholder="Ex: GUI"
-                className="border-[#c5ddf5]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Prénom</label>
-              <Input
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                placeholder="Ex: Ramarson"
-                className="border-[#c5ddf5]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Unité de production</label>
-              <Input
-                value={formData.unit_name}
-                onChange={(e) => setFormData({ ...formData, unit_name: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Ambodiampana"
                 className="border-[#c5ddf5]"
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Code unité *</label>
+              <Input
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                placeholder="Ex: UNIT-001"
+                className="border-[#c5ddf5]"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Type d'unité</label>
+              <Select value={formData.unit_type} onValueChange={(v) => setFormData({ ...formData, unit_type: v as ProductionUnit['unit_type'] })}>
+                <SelectTrigger className="border-[#c5ddf5]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="group">Groupe</SelectItem>
+                  <SelectItem value="site">Site</SelectItem>
+                  <SelectItem value="village">Village</SelectItem>
+                  <SelectItem value="region">Region</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -597,35 +613,93 @@ export function ProducersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Téléphone</label>
+              <label className="text-sm font-medium text-[#0a1628]">Responsable</label>
               <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+261 XX XX XXX XX"
+                value={formData.manager_name}
+                onChange={(e) => setFormData({ ...formData, manager_name: e.target.value })}
+                placeholder="Nom du responsable"
                 className="border-[#c5ddf5]"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Date d'intégration</label>
+              <label className="text-sm font-medium text-[#0a1628]">Fonction du responsable</label>
               <Input
-                value={formData.joined_at}
-                onChange={(e) => setFormData({ ...formData, joined_at: e.target.value })}
+                value={formData.manager_function}
+                onChange={(e) => setFormData({ ...formData, manager_function: e.target.value })}
+                placeholder="Fonction"
+                className="border-[#c5ddf5]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Téléphone</label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+261 XX XX XXX XX"
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Email</label>
+                <Input
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="exemple@domain.com"
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Membres</label>
+                <Input
+                  type="number"
+                  value={formData.members_count}
+                  onChange={(e) => setFormData({ ...formData, members_count: e.target.value })}
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Superficie (ha)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.total_area}
+                  onChange={(e) => setFormData({ ...formData, total_area: e.target.value })}
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Date de création</label>
+              <Input
+                value={formData.creation_date}
+                onChange={(e) => setFormData({ ...formData, creation_date: e.target.value })}
                 placeholder="JJ/MM/AAAA"
                 className="border-[#c5ddf5]"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Catégorie de risque</label>
-              <Select value={formData.risk_category} onValueChange={(v) => setFormData({ ...formData, risk_category: v })}>
+              <label className="text-sm font-medium text-[#0a1628]">Statut</label>
+              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as ProductionUnit['status'] })}>
                 <SelectTrigger className="border-[#c5ddf5]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Faible</SelectItem>
-                  <SelectItem value="medium">Moyen</SelectItem>
-                  <SelectItem value="high">Fort</SelectItem>
+                  <SelectItem value="active">Actif</SelectItem>
+                  <SelectItem value="inactive">Inactif</SelectItem>
+                  <SelectItem value="suspended">Suspendu</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Observations</label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="border-[#c5ddf5]"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -644,34 +718,40 @@ export function ProducersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Edit className="w-5 h-5" />
-              Modifier le Producteur
+              Modifier l'Unité
             </DialogTitle>
-            <DialogDescription>Modifiez les informations du producteur</DialogDescription>
+            <DialogDescription>Modifiez les informations de l'unité</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Nom du membre</label>
+              <label className="text-sm font-medium text-[#0a1628]">Nom de l'unité</label>
               <Input
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="border-[#c5ddf5]"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Prénom</label>
+              <label className="text-sm font-medium text-[#0a1628]">Code unité</label>
               <Input
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 className="border-[#c5ddf5]"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Unité de production</label>
-              <Input
-                value={formData.unit_name}
-                onChange={(e) => setFormData({ ...formData, unit_name: e.target.value })}
-                className="border-[#c5ddf5]"
-              />
+              <label className="text-sm font-medium text-[#0a1628]">Type d'unité</label>
+              <Select value={formData.unit_type} onValueChange={(v) => setFormData({ ...formData, unit_type: v as ProductionUnit['unit_type'] })}>
+                <SelectTrigger className="border-[#c5ddf5]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="group">Groupe</SelectItem>
+                  <SelectItem value="site">Site</SelectItem>
+                  <SelectItem value="village">Village</SelectItem>
+                  <SelectItem value="region">Region</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -721,6 +801,14 @@ export function ProducersPage() {
               </div>
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Responsable</label>
+              <Input
+                value={formData.manager_name}
+                onChange={(e) => setFormData({ ...formData, manager_name: e.target.value })}
+                className="border-[#c5ddf5]"
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium text-[#0a1628]">Téléphone</label>
               <Input
                 value={formData.phone}
@@ -728,37 +816,37 @@ export function ProducersPage() {
                 className="border-[#c5ddf5]"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Date d'intégration</label>
-              <Input
-                value={formData.joined_at}
-                onChange={(e) => setFormData({ ...formData, joined_at: e.target.value })}
-                placeholder="JJ/MM/AAAA"
-                className="border-[#c5ddf5]"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Membres</label>
+                <Input
+                  type="number"
+                  value={formData.members_count}
+                  onChange={(e) => setFormData({ ...formData, members_count: e.target.value })}
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Superficie (ha)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.total_area}
+                  onChange={(e) => setFormData({ ...formData, total_area: e.target.value })}
+                  className="border-[#c5ddf5]"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Catégorie de risque</label>
-              <Select value={formData.risk_category} onValueChange={(v) => setFormData({ ...formData, risk_category: v })}>
+              <label className="text-sm font-medium text-[#0a1628]">Statut</label>
+              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as ProductionUnit['status'] })}>
                 <SelectTrigger className="border-[#c5ddf5]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Faible</SelectItem>
-                  <SelectItem value="medium">Moyen</SelectItem>
-                  <SelectItem value="high">Fort</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#0a1628]">Préparation/transformation</label>
-              <Select value={formData.member_processing} onValueChange={(v) => setFormData({ ...formData, member_processing: v })}>
-                <SelectTrigger className="border-[#c5ddf5]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no">Non</SelectItem>
-                  <SelectItem value="yes">Oui</SelectItem>
+                  <SelectItem value="active">Actif</SelectItem>
+                  <SelectItem value="inactive">Inactif</SelectItem>
+                  <SelectItem value="suspended">Suspendu</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -779,90 +867,71 @@ export function ProducersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Users className="w-5 h-5" />
-              Détails du Producteur
+              Détails de l'Unité
             </DialogTitle>
           </DialogHeader>
-          {selectedProducer && (
+          {selectedUnit && (
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4 p-4 bg-[#e8f4fc] rounded-lg">
                 <div className="w-14 h-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold">
-                  {(selectedProducer.last_name || '?')[0]}
+                  {selectedUnit.name.split(" ").map(n => n[0]).join("")}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#0a1628]">
-                    {[selectedProducer.last_name, selectedProducer.first_name].filter(Boolean).join(' ') || selectedProducer.code}
-                  </h3>
-                  <p className="text-sm font-mono text-[#5a7a9a]">{selectedProducer.code}</p>
-                  {selectedProducer.unit_name && (
-                    <p className="text-xs text-[#5a7a9a]">{selectedProducer.unit_name}</p>
-                  )}
+                  <h3 className="font-semibold text-[#0a1628]">{selectedUnit.name}</h3>
+                  <p className="text-sm font-mono text-[#5a7a9a]">{selectedUnit.code}</p>
+                  <p className="text-xs text-[#5a7a9a]">{unitTypeLabels[selectedUnit.unit_type] || selectedUnit.unit_type}</p>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><MapPin className="w-3 h-3" /> Région</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.region_name || selectedProducer.region}</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.region_name || '-'}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a]">Commune</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.commune_name || selectedProducer.commune}</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.commune_name || '-'}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Phone className="w-3 h-3" /> Téléphone</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.phone || '-'}</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.phone || '-'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Date d'intégration</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.joined_at ? new Date(selectedProducer.joined_at).toLocaleDateString('fr-FR') : '-'}</p>
+                  <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Mail className="w-3 h-3" /> Email</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.email || '-'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Parcelles</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.parcels_count || 0}</p>
+                  <p className="text-xs text-[#5a7a9a]">Responsable</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.manager_name || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a7a9a]">Fonction</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.manager_function || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a7a9a]">Membres</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.members_count || 0}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a]">Surface totale</p>
-                  <p className="font-medium text-[#0a1628]">{(selectedProducer.total_area || 0).toLocaleString('fr-FR')} ha</p>
+                  <p className="font-medium text-[#0a1628]">{(selectedUnit.total_area || 0).toLocaleString('fr-FR')} ha</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Statut UE</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.eu_status || '-'}</p>
+                  <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Calendar className="w-3 h-3" /> Date de création</p>
+                  <p className="font-medium text-[#0a1628]">{selectedUnit.creation_date ? new Date(selectedUnit.creation_date).toLocaleDateString('fr-FR') : '-'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Statut NOP</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.nop_status || '-'}</p>
+                  <p className="text-xs text-[#5a7a9a]">Statut</p>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${statusConfig[selectedUnit.status]?.class || statusConfig.active.class}`}>
+                    {statusConfig[selectedUnit.status]?.label || selectedUnit.status}
+                  </span>
                 </div>
               </div>
-
-              {/* Parcels list */}
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-[#0a1628] mb-2">Mes parcelles</h4>
-                {isLoadingParcels ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#1e3a5f]" />
-                  </div>
-                ) : producerParcels.length === 0 ? (
-                  <p className="text-sm text-[#5a7a9a]">Aucune parcelle enregistrée</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {producerParcels.map((parcel) => (
-                      <div key={parcel.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-[#c5ddf5]">
-                        <div>
-                          <p className="font-medium text-sm text-[#0a1628]">Parcelle {parcel.code}</p>
-                          <p className="text-xs text-[#5a7a9a]">
-                            {parcel.main_crop || 'Culture non renseignée'}
-                            {parcel.intercrop ? ` + ${parcel.intercrop}` : ''}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-[#0a1628]">{Number(parcel.area).toLocaleString('fr-FR')} ha</p>
-                          <p className="text-xs text-[#5a7a9a]">{parcel.conversion_status === 'organic' ? 'Biologique' : parcel.conversion_status === 'conversion' ? 'En conversion' : parcel.conversion_status === 'conventional' ? 'Conventionnelle' : '-'}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {selectedUnit.notes && (
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a7a9a]">Observations</p>
+                  <p className="text-sm text-[#0a1628]">{selectedUnit.notes}</p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -871,3 +940,16 @@ export function ProducersPage() {
   )
 }
 
+function useUnit(id: number | null) {
+  const { data, error, isLoading, mutate: refresh } = useSWR<ProductionUnit>(
+    id ? `/production-units/${id}/` : null,
+    fetcher
+  )
+
+  return {
+    unit: data,
+    isLoading,
+    error,
+    refresh,
+  }
+}

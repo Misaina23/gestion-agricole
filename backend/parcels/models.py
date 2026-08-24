@@ -80,6 +80,7 @@ class Parcel(TimeStampedModel):
     )
     
     # Parcel details
+    registration_date = models.DateField(blank=True, null=True, verbose_name="Date d'enregistrement")
     area = models.DecimalField(
         max_digits=10,
         decimal_places=4,
@@ -89,6 +90,7 @@ class Parcel(TimeStampedModel):
     # its producer (the cooperative register reuses those codes).
     main_crop = models.CharField(max_length=200, blank=True, null=True, verbose_name='Culture principale')
     intercrop = models.CharField(max_length=300, blank=True, null=True, verbose_name='Interculture')
+    bio_location = models.CharField(max_length=10, blank=True, null=True, verbose_name='Localisation bio')
     conversion_status = models.CharField(
         max_length=20,
         choices=[('organic', 'Biologique'), ('conversion', 'En conversion'), ('conventional', 'Conventionnelle')],
@@ -100,6 +102,7 @@ class Parcel(TimeStampedModel):
         blank=True, null=True, verbose_name='Niveau de conversion'
     )
     conversion_start_date = models.DateField(blank=True, null=True, verbose_name='Début de conversion')
+    last_used_date = models.DateField(blank=True, null=True, verbose_name='Date de dernière utilisation')
     eu_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut UE')
     nop_status = models.CharField(max_length=30, blank=True, null=True, verbose_name='Statut NOP')
     estimated_yield = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, verbose_name='Rendement estimé (kg/ha)')

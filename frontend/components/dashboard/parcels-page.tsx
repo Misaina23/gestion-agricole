@@ -79,14 +79,17 @@ export function ParcelsPage() {
     producer: "",
     area: "",
     vanilla_plants: "",
-    tutor_trees: "",
+    main_crop: "",
+    intercrop: "",
     latitude: "",
     longitude: "",
+    conversion_status: "organic",
+    conversion_level: "",
   })
 
   const params: Record<string, string> = { page_size: "4" }
   if (searchQuery) params.search = searchQuery
-  if (statusFilter !== "all") params.status = statusFilter
+  if (statusFilter !== "all") params.conversion_status = statusFilter
   if (regionFilter !== "all") params.producer__region = regionFilter
   params.page = currentPage.toString()
 
@@ -106,7 +109,7 @@ export function ParcelsPage() {
 
   const totalSurface = parcels.reduce((acc, p) => acc + toNumber(p.area), 0)
   const totalVanillaTrees = parcels.reduce((acc, p) => acc + toNumber(p.vanilla_plants), 0)
-  const verifiedCount = parcels.filter(p => p.status === "active").length
+  const organicCount = parcels.filter(p => p.conversion_status === 'organic').length
 
   const handleExportExcel = async () => {
     setIsExporting(true)
@@ -139,13 +142,15 @@ export function ParcelsPage() {
         producer: Number(formData.producer),
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,
-        tutor_trees: parseInt(formData.tutor_trees) || 0,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        status: "new",
+        main_crop: formData.main_crop || undefined,
+        intercrop: formData.intercrop || undefined,
+        latitude: formData.latitude || undefined,
+        longitude: formData.longitude || undefined,
+        conversion_status: formData.conversion_status as Parcel['conversion_status'],
+        conversion_level: formData.conversion_level as Parcel['conversion_level'],
       })
       toast.success("Parcelle ajoutée avec succès")
-      setFormData({ producer: "", area: "", vanilla_plants: "", tutor_trees: "", latitude: "", longitude: "" })
+      setFormData({ producer: "", area: "", vanilla_plants: "", main_crop: "", intercrop: "", latitude: "", longitude: "", conversion_status: "organic", conversion_level: "" })
       setIsAddDialogOpen(false)
       invalidateParcels()
       refresh()
@@ -163,9 +168,12 @@ export function ParcelsPage() {
       await parcelsApi.update(selectedParcel.id, {
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,
-        tutor_trees: parseInt(formData.tutor_trees) || 0,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
+        main_crop: formData.main_crop || undefined,
+        intercrop: formData.intercrop || undefined,
+        latitude: formData.latitude || undefined,
+        longitude: formData.longitude || undefined,
+        conversion_status: formData.conversion_status as Parcel['conversion_status'],
+        conversion_level: formData.conversion_level as Parcel['conversion_level'],
       })
       toast.success("Parcelle modifiée avec succès")
       setIsEditDialogOpen(false)
@@ -203,9 +211,12 @@ export function ParcelsPage() {
       producer: parcel.producer?.toString() || "",
       area: parcel.area?.toString() || "",
       vanilla_plants: parcel.vanilla_plants?.toString() || "",
-      tutor_trees: parcel.tutor_trees?.toString() || "",
+      main_crop: parcel.main_crop || "",
+      intercrop: parcel.intercrop || "",
       latitude: parcel.latitude || "",
       longitude: parcel.longitude || "",
+      conversion_status: parcel.conversion_status || "organic",
+      conversion_level: parcel.conversion_level || "",
     })
     try {
       setIsEditDialogOpen(true)
@@ -282,8 +293,8 @@ export function ParcelsPage() {
           icon={<TreeDeciduous className="w-5 h-5" />}
         />
         <StatCard
-          title="Parcelles vérifiées"
-          value={verifiedCount}
+          title="Parcelles biologiques"
+          value={organicCount}
           icon={<Navigation className="w-5 h-5 text-[#1e3a5f]" />}
         />
       </div>
@@ -387,8 +398,8 @@ export function ParcelsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[parcel.status]?.class || statusConfig.pending.class}`}>
-                        {statusConfig[parcel.status]?.label || parcel.status}
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[parcel.conversion_status || 'new']?.class || statusConfig.new.class}`}>
+                        {statusConfig[parcel.conversion_status || 'new']?.label || parcel.conversion_status || '-'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -470,7 +481,7 @@ export function ParcelsPage() {
               <SelectContent>
                 {producersList.map((producer) => (
                   <SelectItem key={producer.id} value={producer.id.toString()}>
-                    {producer.code} - {producer.name}
+                    {producer.code} - {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -499,12 +510,50 @@ export function ParcelsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Tuteurs</label>
+                <label className="text-sm font-medium text-[#0a1628]">Statut</label>
+                <Select value={formData.conversion_status} onValueChange={(v) => setFormData({ ...formData, conversion_status: v })}>
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="organic">Biologique</SelectItem>
+                    <SelectItem value="conversion">En conversion</SelectItem>
+                    <SelectItem value="conventional">Conventionnelle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {formData.conversion_status === 'conversion' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Niveau de conversion</label>
+                <Select value={formData.conversion_level} onValueChange={(v) => setFormData({ ...formData, conversion_level: v })}>
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="C1">C1</SelectItem>
+                    <SelectItem value="C2">C2</SelectItem>
+                    <SelectItem value="C3">C3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Culture principale</label>
                 <Input
-                  type="number"
-                  value={formData.tutor_trees}
-                  onChange={(e) => setFormData({ ...formData, tutor_trees: e.target.value })}
-                  placeholder="0"
+                  value={formData.main_crop}
+                  onChange={(e) => setFormData({ ...formData, main_crop: e.target.value })}
+                  placeholder="Ex: Vanille"
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Interculture</label>
+                <Input
+                  value={formData.intercrop}
+                  onChange={(e) => setFormData({ ...formData, intercrop: e.target.value })}
+                  placeholder="Ex: Girofle"
                   className="border-[#c5ddf5]"
                 />
               </div>
@@ -572,11 +621,50 @@ export function ParcelsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Tuteurs</label>
+                <label className="text-sm font-medium text-[#0a1628]">Statut</label>
+                <Select value={formData.conversion_status} onValueChange={(v) => setFormData({ ...formData, conversion_status: v })}>
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="organic">Biologique</SelectItem>
+                    <SelectItem value="conversion">En conversion</SelectItem>
+                    <SelectItem value="conventional">Conventionnelle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {formData.conversion_status === 'conversion' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Niveau de conversion</label>
+                <Select value={formData.conversion_level} onValueChange={(v) => setFormData({ ...formData, conversion_level: v })}>
+                  <SelectTrigger className="border-[#c5ddf5]">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="C1">C1</SelectItem>
+                    <SelectItem value="C2">C2</SelectItem>
+                    <SelectItem value="C3">C3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Culture principale</label>
                 <Input
-                  type="number"
-                  value={formData.tutor_trees}
-                  onChange={(e) => setFormData({ ...formData, tutor_trees: e.target.value })}
+                  value={formData.main_crop}
+                  onChange={(e) => setFormData({ ...formData, main_crop: e.target.value })}
+                  placeholder="Ex: Vanille"
+                  className="border-[#c5ddf5]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#0a1628]">Interculture</label>
+                <Input
+                  value={formData.intercrop}
+                  onChange={(e) => setFormData({ ...formData, intercrop: e.target.value })}
+                  placeholder="Ex: Girofle"
                   className="border-[#c5ddf5]"
                 />
               </div>
@@ -645,7 +733,7 @@ export function ParcelsPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><TreeDeciduous className="w-3 h-3" /> Pieds</p>
-                  <p className="font-medium text-[#0a1628]">{selectedParcel.vanilla_plants || 0} vanille / {selectedParcel.tutor_trees || 0} tuteurs</p>
+                  <p className="font-medium text-[#0a1628]">{selectedParcel.vanilla_plants || 0} vanille</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Navigation className="w-3 h-3" /> Coordonnées</p>
@@ -657,8 +745,8 @@ export function ParcelsPage() {
                 </div>
               </div>
               <div className="pt-2">
-                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[selectedParcel.status]?.class || statusConfig.pending.class}`}>
-                  {statusConfig[selectedParcel.status]?.label || selectedParcel.status}
+                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusConfig[selectedParcel.conversion_status || 'new']?.class || statusConfig.new.class}`}>
+                  {statusConfig[selectedParcel.conversion_status || 'new']?.label || selectedParcel.conversion_status || '-'}
                 </span>
               </div>
             </div>

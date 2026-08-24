@@ -2,7 +2,7 @@
 Serializers for Core App
 """
 from rest_framework import serializers
-from .models import Region, Commune, District, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog
+from .models import Region, Commune, District, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog, ProductionUnit
 
 
 class DistrictSerializer(serializers.ModelSerializer):
@@ -88,3 +88,23 @@ class SyncLogSerializer(serializers.ModelSerializer):
             'completed_at', 'error_message'
         ]
         read_only_fields = ['id', 'started_at']
+
+
+class ProductionUnitSerializer(serializers.ModelSerializer):
+    region_name = serializers.CharField(source='region.name', read_only=True)
+    district_name = serializers.CharField(source='district.name', read_only=True)
+    commune_name = serializers.CharField(source='commune.name', read_only=True)
+    producers_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductionUnit
+        fields = [
+            'id', 'name', 'code', 'unit_type',
+            'region', 'region_name', 'district', 'district_name', 'commune', 'commune_name',
+            'manager_name', 'manager_function', 'phone', 'email',
+            'members_count', 'total_area', 'creation_date', 'status', 'notes',
+            'producers_count', 'created_at', 'updated_at'
+        ]
+
+    def get_producers_count(self, obj):
+        return obj.producers.count()

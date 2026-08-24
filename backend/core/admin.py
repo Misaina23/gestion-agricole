@@ -2,7 +2,7 @@
 Admin configuration for Core App
 """
 from django.contrib import admin
-from .models import Region, Commune, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog
+from .models import Region, Commune, Fokontany, VanillaVariety, QualityGrade, Season, SyncLog, ProductionUnit
 
 
 @admin.register(Region)
@@ -53,3 +53,11 @@ class SyncLogAdmin(admin.ModelAdmin):
     list_filter = ['status', 'started_at']
     search_fields = ['user__username']
     readonly_fields = ['started_at']
+
+
+@admin.register(ProductionUnit)
+class ProductionUnitAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'unit_type', 'region', 'commune', 'manager_name', 'members_count', 'total_area', 'status']
+    list_filter = ['unit_type', 'status', 'region', 'commune']
+    search_fields = ['name', 'code', 'manager_name', 'phone', 'email']
+    readonly_fields = ['created_at', 'updated_at']
