@@ -74,6 +74,7 @@ export function ParcelsPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null)
+  const [selectedParcelId, setSelectedParcelId] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     producer: "",
@@ -162,10 +163,10 @@ export function ParcelsPage() {
   }
 
   const handleEdit = async () => {
-    if (!selectedParcel) return
+    if (!selectedParcelId) return
     setIsSubmitting(true)
     try {
-      await parcelsApi.update(selectedParcel.id, {
+      await parcelsApi.update(selectedParcelId, {
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,
         main_crop: formData.main_crop || undefined,
@@ -178,6 +179,7 @@ export function ParcelsPage() {
       toast.success("Parcelle modifiée avec succès")
       setIsEditDialogOpen(false)
       setSelectedParcel(null)
+      setSelectedParcelId(null)
       invalidateParcels()
       refresh()
     } catch (err) {
@@ -188,13 +190,14 @@ export function ParcelsPage() {
   }
 
   const handleDelete = async () => {
-    if (!selectedParcel) return
+    if (!selectedParcelId) return
     setIsSubmitting(true)
     try {
-      await parcelsApi.delete(selectedParcel.id)
+      await parcelsApi.delete(selectedParcelId)
       successAlert("Suppression réussie", "La parcelle a été supprimée.")
       setIsDeleteDialogOpen(false)
       setSelectedParcel(null)
+      setSelectedParcelId(null)
       invalidateParcels()
       refresh()
     } catch (err) {
@@ -205,7 +208,9 @@ export function ParcelsPage() {
   }
 
   const openEditDialog = (parcel: Parcel) => {
-    if (!parcel?.id) return
+    const parcelId = Number(parcel?.id)
+    if (!Number.isInteger(parcelId) || parcelId <= 0) return
+    setSelectedParcelId(parcelId)
     setSelectedParcel(parcel)
     setFormData({
       producer: parcel.producer?.toString() || "",
@@ -226,11 +231,22 @@ export function ParcelsPage() {
   }
 
   const openViewDialog = (parcel: Parcel) => {
+    const parcelId = Number(parcel?.id)
+    if (!Number.isInteger(parcelId) || parcelId <= 0) return
+    setSelectedParcelId(parcelId)
     setSelectedParcel(parcel)
     setIsViewDialogOpen(true)
+    parcelsApi.get(parcelId).then((details) => {
+      setSelectedParcel((current) => current?.id === parcelId ? details : current)
+    }).catch(() => {
+      toast.error("Impossible de charger les détails de la parcelle")
+    })
   }
 
   const openDeleteDialog = (parcel: Parcel) => {
+    const parcelId = Number(parcel?.id)
+    if (!Number.isInteger(parcelId) || parcelId <= 0) return
+    setSelectedParcelId(parcelId)
     setSelectedParcel(parcel)
     confirmDelete("La parcelle et ses données liées seront définitivement supprimées.").then((ok) => {
       if (ok) handleDelete()
@@ -319,10 +335,9 @@ export function ParcelsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous statuts</SelectItem>
-                <SelectItem value="active">Actif</SelectItem>
-                <SelectItem value="inactive">Inactif</SelectItem>
-                <SelectItem value="fallow">En jachère</SelectItem>
-                <SelectItem value="new">Nouveau</SelectItem>
+                <SelectItem value="organic">Biologique</SelectItem>
+                <SelectItem value="conversion">En conversion</SelectItem>
+                <SelectItem value="conventional">Conventionnelle</SelectItem>
               </SelectContent>
             </Select>
             <Select value={regionFilter} onValueChange={setRegionFilter}>
@@ -472,21 +487,21 @@ export function ParcelsPage() {
             <DialogDescription>Enregistrez une nouvelle parcelle GPS</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#0a1628]">Producteur</label>
-            <Select value={formData.producer} onValueChange={(v) => setFormData({ ...formData, producer: v })}>
-              <SelectTrigger className="border-[#c5ddf5]">
-                <SelectValue placeholder="Sélectionner un producteur" />
-              </SelectTrigger>
-              <SelectContent>
-                {producersList.map((producer) => (
-                  <SelectItem key={producer.id} value={producer.id.toString()}>
-                    {producer.code} - {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#0a1628]">Producteur</label>
+              <Select value={formData.producer} onValueChange={(v) => setFormData({ ...formData, producer: v })}>
+                <SelectTrigger className="border-[#c5ddf5]">
+                  <SelectValue placeholder="Sélectionner un producteur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {producersList.map((producer) => (
+                    <SelectItem key={producer.id} value={producer.id.toString()}>
+                      {producer.code} - {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[#0a1628]">Surface (ha)</label>
@@ -719,14 +734,14 @@ export function ParcelsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1">
-                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><MapPin className="w-3 h-3" /> Région</p>
-                   <p className="font-medium text-[#0a1628]">{selectedParcel.region_name || '-'}</p>
-                 </div>
-                 <div className="space-y-1">
-                   <p className="text-xs text-[#5a7a9a]">Site</p>
-                   <p className="font-medium text-[#0a1628]">{selectedParcel.site_name || '-'}</p>
-                 </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><MapPin className="w-3 h-3" /> Région</p>
+                  <p className="font-medium text-[#0a1628]">{selectedParcel.region_name || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-[#5a7a9a]">Site</p>
+                  <p className="font-medium text-[#0a1628]">{selectedParcel.site_name || '-'}</p>
+                </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Maximize2 className="w-3 h-3" /> Surface</p>
                   <p className="font-medium text-[#0a1628]">{(selectedParcel.area || 0).toFixed(2)} ha</p>

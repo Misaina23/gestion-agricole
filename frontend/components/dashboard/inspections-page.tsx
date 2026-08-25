@@ -166,16 +166,23 @@ export function InspectionsPage() {
   }
 
   const handleAdd = async () => {
+    if (!formData.producer || !formData.actual_date || !formData.inspection_type) {
+      toast.error("Le producteur, la date et le type sont obligatoires")
+      return
+    }
     setIsSubmitting(true)
     try {
       await inspectionsApi.create({
+        code: `INS-${Date.now()}`,
         producer: parseInt(formData.producer),
-        parcel: parseInt(formData.parcel),
-        inspector: parseInt(formData.inspector),
+        parcel: formData.parcel ? parseInt(formData.parcel) : null,
+        inspector: formData.inspector ? parseInt(formData.inspector) : null,
+        planned_date: formData.actual_date,
         actual_date: formData.actual_date,
         inspection_type: formData.inspection_type,
         result: formData.result,
-        score: parseInt(formData.score) || 0,
+        score_overall: formData.score ? parseInt(formData.score) : null,
+        status: "completed",
         observations: formData.observations,
       })
       toast.success("Inspection ajoutee avec succes")
@@ -194,11 +201,13 @@ export function InspectionsPage() {
     setIsSubmitting(true)
     try {
       await inspectionsApi.update(selectedInspection.id, {
-        inspector: parseInt(formData.inspector),
+        inspector: formData.inspector ? parseInt(formData.inspector) : null,
+        parcel: formData.parcel ? parseInt(formData.parcel) : null,
+        planned_date: formData.actual_date,
         actual_date: formData.actual_date,
         inspection_type: formData.inspection_type,
         result: formData.result,
-        score: parseInt(formData.score) || 0,
+        score_overall: formData.score ? parseInt(formData.score) : null,
         observations: formData.observations,
       })
       toast.success("Inspection modifiee avec succes")
@@ -232,8 +241,8 @@ export function InspectionsPage() {
     setSelectedInspection(inspection)
     setFormData({
       producer: inspection.producer.toString(),
-      parcel: inspection.parcel.toString(),
-      inspector: inspection.inspector.toString(),
+      parcel: inspection.parcel?.toString() || "",
+      inspector: inspection.inspector?.toString() || "",
       actual_date: inspection.actual_date || inspection.planned_date,
       inspection_type: inspection.inspection_type,
       result: inspection.result,
@@ -302,8 +311,8 @@ export function InspectionsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <StatCard title="Validees" value={inspectionStats?.by_status?.passed ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} />
-        <StatCard title="En attente" value={inspectionStats?.by_status?.pending ?? 0} icon={<Clock className="w-5 h-5" />} />
+        <StatCard title="Validees" value={inspectionStats?.by_result?.passed ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} />
+        <StatCard title="En attente" value={inspectionStats?.by_result?.pending ?? 0} icon={<Clock className="w-5 h-5" />} />
         <StatCard title="Total" value={total} icon={<ClipboardCheck className="w-5 h-5" />} />
         <StatCard title="Score moyen" value={`${(inspectionStats?.avg_score ?? 0).toFixed(0)}%`} icon={<CheckCircle2 className="w-5 h-5 text-[#1e3a5f]" />} />
       </div>
@@ -368,15 +377,15 @@ export function InspectionsPage() {
               <TableHead className="font-semibold text-[#1e3a5f] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-            <TableBody>
-              {inspections.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-[#5a7a9a]">
-                    Aucune inspection trouvee
-                  </TableCell>
-                </TableRow>
-              ) : (
-                inspections.map((inspection: Inspection) => {
+          <TableBody>
+            {inspections.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-[#5a7a9a]">
+                  Aucune inspection trouvee
+                </TableCell>
+              </TableRow>
+            ) : (
+              inspections.map((inspection: Inspection) => {
                 const ResultIcon = resultConfig[inspection.result]?.icon || Clock
                 return (
                   <TableRow key={inspection.id} className="hover:bg-muted/50 dark:hover:bg-muted/60">
@@ -535,8 +544,8 @@ export function InspectionsPage() {
                     <SelectValue placeholder="Selectionnez" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="initial">Initiale</SelectItem>
-                    <SelectItem value="followup">Suivi</SelectItem>
+                    <SelectItem value="routine">Routine</SelectItem>
+                    <SelectItem value="follow_up">Suivi</SelectItem>
                     <SelectItem value="certification">Certification</SelectItem>
                   </SelectContent>
                 </Select>
@@ -618,8 +627,8 @@ export function InspectionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="initial">Initiale</SelectItem>
-                    <SelectItem value="followup">Suivi</SelectItem>
+                    <SelectItem value="routine">Routine</SelectItem>
+                    <SelectItem value="follow_up">Suivi</SelectItem>
                     <SelectItem value="certification">Certification</SelectItem>
                   </SelectContent>
                 </Select>

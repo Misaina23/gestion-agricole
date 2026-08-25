@@ -345,7 +345,7 @@ export async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getAuthToken()
-  
+
   const headers = getAuthHeaders(token, options.headers)
 
   const response = await fetch(buildApiUrl(endpoint), {
@@ -372,30 +372,30 @@ export const producersApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<Producer>>(`/producers/${query}`)
   },
-  
+
   get: (id: number) => apiFetch<Producer>(`/producers/${id}/`),
-  
-  create: (data: Partial<Producer>) => 
+
+  create: (data: Partial<Producer>) =>
     apiFetch<Producer>('/producers/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: number, data: Partial<Producer>) =>
     apiFetch<Producer>(`/producers/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: number) =>
     apiFetch<void>(`/producers/${id}/`, { method: 'DELETE' }),
-  
+
   stats: () => apiFetch<DashboardStats['producers']>('/producers/stats/'),
-  
+
   parcels: (id: number) => apiFetch<Parcel[]>(`/producers/${id}/parcels/`),
-  
+
   productions: (id: number) => apiFetch<Production[]>(`/producers/${id}/productions/`),
-  
+
   inspections: (id: number) => apiFetch<Inspection[]>(`/producers/${id}/inspections/`),
 
   activate: (id: number) =>
@@ -495,29 +495,29 @@ export const parcelsApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<Parcel>>(`/parcels/${query}`)
   },
-  
+
   get: (id: number) => apiFetch<Parcel>(`/parcels/${id}/`),
-  
+
   create: (data: Partial<Parcel>) =>
     apiFetch<Parcel>('/parcels/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: number, data: Partial<Parcel>) =>
     apiFetch<Parcel>(`/parcels/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: number) =>
     apiFetch<void>(`/parcels/${id}/`, { method: 'DELETE' }),
-  
+
   stats: () => apiFetch<DashboardStats['parcels']>('/parcels/stats/'),
-  
+
   verify: (id: number) =>
     apiFetch<Parcel>(`/parcels/${id}/verify/`, { method: 'POST' }),
-  
+
   mapData: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<Array<{
@@ -532,12 +532,12 @@ export const parcelsApi = {
       vanilla_plants: number
     }>>(`/parcels/map_data/${query}`)
   },
-  
+
   exportExcel: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/parcels/export/${query}`, `parcelles_export_${Date.now()}.xlsx`)
   },
-  
+
   exportPdf: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/parcels/export/${query}`, `parcelles_export_${Date.now()}.pdf`)
@@ -574,31 +574,31 @@ export const productionsApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<Production>>(`/productions/${query}`)
   },
-  
+
   get: (id: number) => apiFetch<Production>(`/productions/${id}/`),
-  
+
   create: (data: Partial<Production>) =>
     apiFetch<Production>('/productions/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: number, data: Partial<Production>) =>
     apiFetch<Production>(`/productions/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: number) =>
     apiFetch<void>(`/productions/${id}/`, { method: 'DELETE' }),
-  
+
   stats: () => apiFetch<DashboardStats['productions']>('/productions/stats/'),
-  
+
   exportExcel: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/productions/export/${query}`, `productions_export_${Date.now()}.xlsx`)
   },
-  
+
   exportPdf: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/productions/export/${query}`, `productions_export_${Date.now()}.pdf`)
@@ -611,31 +611,31 @@ export const inspectionsApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<Inspection>>(`/inspections/${query}`)
   },
-  
+
   get: (id: number) => apiFetch<Inspection>(`/inspections/${id}/`),
-  
+
   create: (data: Partial<Inspection>) =>
     apiFetch<Inspection>('/inspections/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
+
   update: (id: number, data: Partial<Inspection>) =>
     apiFetch<Inspection>(`/inspections/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
+
   delete: (id: number) =>
     apiFetch<void>(`/inspections/${id}/`, { method: 'DELETE' }),
-  
+
   stats: () => apiFetch<DashboardStats['inspections']>('/inspections/stats/'),
-  
+
   exportExcel: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/inspections/export/${query}`, `inspections_export_${Date.now()}.xlsx`)
   },
-  
+
   exportPdf: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/inspections/export/${query}`, `inspections_export_${Date.now()}.pdf`)
@@ -645,7 +645,7 @@ export const inspectionsApi = {
 // Dashboard API
 export const dashboardApi = {
   stats: () => apiFetch<DashboardStats>('/dashboard/'),
-  
+
   recentActivity: () => apiFetch<Array<{
     id: number
     type: string
@@ -653,7 +653,7 @@ export const dashboardApi = {
     timestamp: string
     user: string
   }>>('/dashboard/activity/'),
-  
+
   syncStatus: () => apiFetch<{
     last_sync: string
     is_online: boolean
@@ -664,6 +664,10 @@ export const dashboardApi = {
 // Core API (regions, communes, districts, etc.)
 export const coreApi = {
   regions: () => apiFetch<Array<{ id: number; name: string; code: string }>>('/regions/'),
+
+  qualityGrades: () => apiFetch<Array<{ id: number; name: string; code: string }>>('/quality-grades/'),
+
+  seasons: () => apiFetch<Array<{ id: number; name: string; year: number; is_current: boolean }>>('/seasons/'),
 
   districts: (regionId?: number) => {
     const query = regionId ? `?region=${regionId}` : ''
@@ -757,12 +761,12 @@ export const aiApi = {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<AgriAdvice>(`/ai/advice/${query}`)
   },
-  
+
   getRecommendations: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     return apiFetch<PaginatedResponse<AgriRecommendation>>(`/ai/recommendations/${query}`)
   },
-  
+
   generateMonthlyReport: (month?: string, year?: number) => {
     const now = new Date()
     const y = year || now.getFullYear()
@@ -781,9 +785,9 @@ export const aiApi = {
       body: JSON.stringify(body),
     })
   },
-  
+
   getAnomalies: () => apiFetch<AnomaliesResponse>('/ai/anomalies/'),
-  
+
   summarizeData: () => {
     return apiFetch<{ summary: string; key_metrics: Record<string, number> }>(`/ai/`)
   },

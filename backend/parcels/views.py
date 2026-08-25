@@ -175,7 +175,7 @@ class ParcelViewSet(viewsets.ModelViewSet):
             'polygon_coordinates',
             'producer__last_name', 'producer__first_name', 'producer__code',
             'producer__region__name', 'producer__commune__name'
-        )[:1000]  # Limit for performance
+        )
         return Response(list(data))
     
     @action(detail=False, methods=['get'])

@@ -23,6 +23,8 @@ export default function EntryWizard() {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("producer");
   const [submitting, setSubmitting] = useState(false);
+  const [producerId, setProducerId] = useState<number | null>(null);
+  const [parcelId, setParcelId] = useState<number | null>(null);
 
   const [producer, setProducer] = useState({
     name: "",
@@ -67,6 +69,8 @@ export default function EntryWizard() {
   const submitProducer = async () => {
     setSubmitting(true);
     try {
+      const nameParts = producer.name.trim().split(/\s+/);
+      const lastName = nameParts.shift() || "";
       const res = await fetch(buildApiUrl('/producers/'), {
         method: "POST",
         headers: {
@@ -74,12 +78,11 @@ export default function EntryWizard() {
           Authorization: `Bearer ${localStorage.getItem("auth_tokens") ? JSON.parse(localStorage.getItem("auth_tokens")!).access : ""}`,
         },
         body: JSON.stringify({
-          name: producer.name,
+          last_name: lastName,
+          first_name: nameParts.join(" ") || null,
           phone: producer.phone || null,
-          gender: producer.gender || null,
-          cin: producer.cin || null,
           region: Number(producer.region) || 23,
-          commune: producer.commune || "1",
+          commune: Number(producer.commune) || 1,
           status: "active",
         }),
       });
@@ -95,6 +98,8 @@ export default function EntryWizard() {
         toast.error(msg)
         return
       }
+      const createdProducer = await res.json();
+      setProducerId(createdProducer.id);
       toast.success("Producteur créé");
       goNext();
     } catch (e) {
@@ -106,6 +111,10 @@ export default function EntryWizard() {
   };
 
   const submitParcel = async () => {
+    if (!producerId) {
+      toast.error("Créez d'abord le producteur")
+      return
+    }
     setSubmitting(true);
     try {
       const res = await fetch(buildApiUrl('/parcels/'), {
@@ -123,11 +132,13 @@ export default function EntryWizard() {
           irrigation: parcel.irrigation,
           latitude: parcel.latitude ? Number(parcel.latitude) : null,
           longitude: parcel.longitude ? Number(parcel.longitude) : null,
-          producer: 1,
+          producer: producerId,
           status: "active",
         }),
       });
       if (!res.ok) throw new Error("Échec de création parcelle");
+      const createdParcel = await res.json();
+      setParcelId(createdParcel.id);
       toast.success("Parcelle créée");
       goNext();
     } catch (e) {
@@ -138,8 +149,17 @@ export default function EntryWizard() {
   };
 
   const submitProduction = async () => {
+    if (!parcelId) {
+      toast.error("Créez d'abord la parcelle")
+      return
+    }
     setSubmitting(true);
     try {
+      const seasonResponse = await fetch(buildApiUrl('/seasons/current/'), {
+        headers: { Authorization: `Bearer ${localStorage.getItem("auth_tokens") ? JSON.parse(localStorage.getItem("auth_tokens")!).access : ""}` },
+      });
+      if (!seasonResponse.ok) throw new Error("Aucune saison courante configurée");
+      const season = await seasonResponse.json();
       const res = await fetch(buildApiUrl('/productions/'), {
         method: "POST",
         headers: {
@@ -148,8 +168,8 @@ export default function EntryWizard() {
         },
         body: JSON.stringify({
           code: `PROD-${Date.now()}`,
-          parcel: 1,
-          season: 1,
+          parcel: parcelId,
+          season: season.id,
           harvest_date: production.harvest_date,
           weight_green: Number(production.weight_green) || 0,
           weight_prepared: production.weight_prepared ? Number(production.weight_prepared) : null,
@@ -166,6 +186,8 @@ export default function EntryWizard() {
       if (!res.ok) throw new Error("Échec de création production");
       toast.success("Production enregistrée");
       setStep("producer");
+      setProducerId(null);
+      setParcelId(null);
       setProducer({ name: "", phone: "", gender: "", cin: "", region: "23", commune: "1" });
       setParcel({ code: "", area: "", vanilla_plants: "", variety: "", soil_type: "", irrigation: false, latitude: "", longitude: "" });
       setProduction({

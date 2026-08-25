@@ -54,7 +54,7 @@ import {
 import { toast } from "sonner"
 import { confirmDelete, successAlert, errorAlert } from "@/lib/sweetalert"
 import { useProductions, useProducers, useParcels } from "@/lib/hooks"
-import { productionsApi } from "@/lib/api"
+import { coreApi, productionsApi } from "@/lib/api"
 
 interface Production {
   id: number
@@ -103,6 +103,8 @@ export function ProductionsPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [selectedProduction, setSelectedProduction] = useState<Production | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [seasonId, setSeasonId] = useState<number | null>(null)
+  const [qualityGrades, setQualityGrades] = useState<Array<{ id: number; name: string }>>([])
   const [formData, setFormData] = useState({
     producer: "",
     parcel: "",
@@ -123,6 +125,16 @@ export function ProductionsPage() {
   const { producers = [] } = useProducers({ page_size: "1000" })
   const { parcels = [] } = useParcels({ page_size: "1000" })
   const totalPages = Math.max(1, Math.ceil((total || 0) / 4))
+
+  useEffect(() => {
+    Promise.all([coreApi.seasons(), coreApi.qualityGrades()]).then(([seasons, grades]) => {
+      setSeasonId(seasons.find((season) => season.is_current)?.id || seasons[0]?.id || null)
+      setQualityGrades(grades)
+    }).catch(() => {
+      setSeasonId(null)
+      setQualityGrades([])
+    })
+  }, [])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -153,16 +165,21 @@ export function ProductionsPage() {
   }
 
   const handleAdd = async () => {
+    if (!formData.parcel || !formData.actual_date || !seasonId) {
+      toast.error("La parcelle, la date et la saison sont obligatoires")
+      return
+    }
     setIsSubmitting(true)
     try {
       await productionsApi.create({
-        producer: parseInt(formData.producer),
+        code: `PROD-${Date.now()}`,
         parcel: parseInt(formData.parcel),
-        actual_date: formData.actual_date,
+        season: seasonId,
+        harvest_date: formData.actual_date,
         weight_green: parseFloat(formData.weight_green) || 0,
-        weight_prepared: parseFloat(formData.weight_prepared) || 0,
-        quality: formData.quality,
-        status: formData.status,
+        weight_prepared: formData.weight_prepared ? parseFloat(formData.weight_prepared) : null,
+        quality_grade: formData.quality ? parseInt(formData.quality) : null,
+        status: "harvested",
       })
       toast.success("Production ajoutee avec succes")
       refresh()
@@ -180,10 +197,10 @@ export function ProductionsPage() {
     setIsSubmitting(true)
     try {
       await productionsApi.update(selectedProduction.id, {
-        actual_date: formData.actual_date,
+        harvest_date: formData.actual_date,
         weight_green: parseFloat(formData.weight_green) || 0,
-        weight_prepared: parseFloat(formData.weight_prepared) || 0,
-        quality: formData.quality,
+        weight_prepared: formData.weight_prepared ? parseFloat(formData.weight_prepared) : null,
+        quality_grade: formData.quality ? parseInt(formData.quality) : null,
         status: formData.status,
       })
       toast.success("Production modifiee avec succes")
@@ -221,7 +238,7 @@ export function ProductionsPage() {
       actual_date: production.actual_date || production.harvest_date,
       weight_green: production.weight_green.toString(),
       weight_prepared: (production.weight_prepared || 0).toString(),
-      quality: production.quality_grade_name || "",
+      quality: production.quality_grade?.toString() || "",
       status: production.status,
     })
     setIsEditDialogOpen(true)
@@ -305,9 +322,7 @@ export function ProductionsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes qualites</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="second">Second choix</SelectItem>
+                {qualityGrades.map((grade) => <SelectItem key={grade.id} value={grade.id.toString()}>{grade.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -344,19 +359,19 @@ export function ProductionsPage() {
               <TableHead className="font-semibold text-[#1e3a5f] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-            <TableBody>
-              {productions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-[#5a7a9a]">
-                    <div className="flex flex-col items-center justify-center">
-                      <BarChart3 className="w-8 h-8 mb-2" />
-                      <p>Aucune production trouvee</p>
-                      <p className="text-xs mt-1">Les recoltes seront affichees ici avec leur localisation et leur qualite</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                productions.map((production: Production) => (
+          <TableBody>
+            {productions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-[#5a7a9a]">
+                  <div className="flex flex-col items-center justify-center">
+                    <BarChart3 className="w-8 h-8 mb-2" />
+                    <p>Aucune production trouvee</p>
+                    <p className="text-xs mt-1">Les recoltes seront affichees ici avec leur localisation et leur qualite</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              productions.map((production: Production) => (
                 <TableRow key={production.id} className="hover:bg-[#f0f7ff]">
                   <TableCell className="font-mono text-sm text-[#1e3a5f]">{production.code}</TableCell>
                   <TableCell>
@@ -374,8 +389,8 @@ export function ProductionsPage() {
                     ) : '-'}
                   </TableCell>
                   <TableCell className="text-[#5a7a9a]">{production.actual_date}</TableCell>
-<TableCell className="text-center font-semibold text-[#1e3a5f]">{Number(production.weight_green || 0).toFixed(1)}</TableCell>
-                      <TableCell className="text-center font-semibold text-emerald-600">{Number(production.weight_prepared || 0).toFixed(1)}</TableCell>
+                  <TableCell className="text-center font-semibold text-[#1e3a5f]">{Number(production.weight_green || 0).toFixed(1)}</TableCell>
+                  <TableCell className="text-center font-semibold text-emerald-600">{Number(production.weight_prepared || 0).toFixed(1)}</TableCell>
                   <TableCell>
                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-gray-100 text-[#1e3a5f] border-[#c5ddf5]`}>
                       {production.quality_grade_name || "N/A"}
@@ -605,9 +620,11 @@ export function ProductionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="collected">Collectee</SelectItem>
-                    <SelectItem value="processing">En traitement</SelectItem>
-                    <SelectItem value="shipped">Expediee</SelectItem>
+                    <SelectItem value="harvested">Recolte</SelectItem>
+                    <SelectItem value="drying">Seche</SelectItem>
+                    <SelectItem value="curing">Affinage</SelectItem>
+                    <SelectItem value="ready">Pret</SelectItem>
+                    <SelectItem value="sold">Vendu</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
