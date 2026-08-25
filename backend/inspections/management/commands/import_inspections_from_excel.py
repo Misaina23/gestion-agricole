@@ -5,8 +5,7 @@ Inspection records are derived from:
 - Sheet 2 -> last internal inspection date + inspector
 - Sheet 3 -> production unit last internal inspection date + inspector
 
-Existing Inspection objects are matched by:
-- producer + inspection_type + planned_date/actual_date + inspector
+Existing Inspection objects are matched by code.
 """
 import os
 import secrets
@@ -69,14 +68,11 @@ class Command(BaseCommand):
 
         self.stdout.write('Loading reference data...')
         producers = {p.code: p for p in Producer.objects.all()}
-        producers_by_id = {p.id: p for p in Producer.objects.all()}
         parcels_by_producer = {}
         for parcel in Parcel.objects.select_related('producer').all():
             parcels_by_producer.setdefault(parcel.producer_id, []).append(parcel)
 
-        existing_inspections = set(
-            Inspection.objects.values_list('code', flat=True)
-        )
+        existing_inspections = set(Inspection.objects.values_list('code', flat=True))
         inspector_cache = {}
 
         def get_or_create_inspector(name):
@@ -105,15 +101,19 @@ class Command(BaseCommand):
             return inspector
 
         def build_code(producer_code, inspection_type, date_value):
-            return f"INS-{producer_code}-{inspection_type}-{date_value}".upper().replace(' ', '-')[:50]
+            date_str = str(date_value) if date_value else 'UNKNOWN'
+            return f"INS-{producer_code}-{inspection_type}-{date_str}".upper().replace(' ', '-')[:50]
 
         to_create = []
-        to_update = []
         skipped = 0
         processed = 0
+        internal_dates_found = 0
+        external_dates_found = 0
+        updated = 0
 
         self.stdout.write('Processing member sheet...')
         rows = list(ws_members.iter_rows(min_row=3, values_only=True))
+        self.stdout.write(f'Total member rows: {len(rows)}')
         for row in rows:
             if limit is not None and processed >= limit:
                 break
@@ -124,9 +124,14 @@ class Command(BaseCommand):
                 processed += 1
                 continue
 
-            internal_date = to_date(row[12])
-            internal_inspector_name = to_str(row[13])
-            external_date = to_date(row[14])
+            internal_date = to_date(row[13])
+            internal_inspector_name = to_str(row[14])
+            external_date = to_date(row[15])
+
+            if internal_date:
+                internal_dates_found += 1
+            if external_date:
+                external_dates_found += 1
 
             inspector = get_or_create_inspector(internal_inspector_name) if internal_inspector_name else None
             parcel = (parcels_by_producer.get(producer.id) or [None])[0]
@@ -173,9 +178,9 @@ class Command(BaseCommand):
 
             processed += 1
             if processed % 1000 == 0:
-                self.stdout.write(f'  ... {processed} rows processed')
+                self.stdout.write(f'  ... {processed} rows processed, creates: {len(to_create)}, updated: {updated}, skipped: {skipped}')
 
-        self.stdout.write(f'Member sheet done. Pending creates: {len(to_create)}')
+        self.stdout.write(f'Member sheet done. Rows: {len(rows)}, Found internal dates: {internal_dates_found}, external dates: {external_dates_found}, Pending creates: {len(to_create)}, updated: {updated}, skipped: {skipped}')
 
         # Sheet 3 -> units
         if ws_units:
@@ -189,9 +194,9 @@ class Command(BaseCommand):
                 if not unit_name and not unit_code:
                     continue
 
-                internal_date = to_date(row[12])
-                internal_inspector_name = to_str(row[13])
-                external_date = to_date(row[14])
+                internal_date = to_date(row[13])
+                internal_inspector_name = to_str(row[14])
+                external_date = to_date(row[15])
 
                 inspector = get_or_create_inspector(internal_inspector_name) if internal_inspector_name else None
                 producer = None

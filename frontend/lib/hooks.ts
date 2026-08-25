@@ -123,7 +123,8 @@ export function useParcelMapData(params?: Record<string, string>) {
     code: string
     latitude: string
     longitude: string
-    producer_name?: string
+    producer__last_name?: string
+    producer__first_name?: string
     producer_code?: string
     status: string
     surface: number
@@ -138,7 +139,10 @@ export function useParcelMapData(params?: Record<string, string>) {
   )
   
   return {
-    mapData: data || [],
+    mapData: (data || []).map((p) => ({
+      ...p,
+      producer_name: [p.producer__last_name, p.producer__first_name].filter(Boolean).join(' ') || undefined,
+    })),
     isLoading,
     error,
   }

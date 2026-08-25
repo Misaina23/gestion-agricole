@@ -173,7 +173,7 @@ class ParcelViewSet(viewsets.ModelViewSet):
             'area', 'vanilla_plants', 'status', 'is_certified',
             'main_crop', 'intercrop', 'conversion_status', 'conversion_level', 'estimated_yield', 'eu_status', 'nop_status',
             'polygon_coordinates',
-            'producer__name', 'producer__code',
+            'producer__last_name', 'producer__first_name', 'producer__code',
             'producer__region__name', 'producer__commune__name'
         )[:1000]  # Limit for performance
         return Response(list(data))
