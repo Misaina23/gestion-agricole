@@ -37,6 +37,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 
 from core.models import Region, District, Commune, Fokontany
+from inspections.models import Inspection
 from producers.models import Producer
 from parcels.models import Parcel, ParcelRegisterHarvest
 
