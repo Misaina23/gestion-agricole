@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -20,6 +20,7 @@ export default function ProducersListScreen({ navigation }: any) {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadProducers();
@@ -29,9 +30,8 @@ export default function ProducersListScreen({ navigation }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const url = search
-        ? `${API_URL.replace(/\/$/, '')}/api/producers/?search=${encodeURIComponent(search)}`
-        : `${API_URL.replace(/\/$/, '')}/api/producers/`;
+      const query = search ? `&search=${encodeURIComponent(search)}` : '';
+      const url = `${API_URL.replace(/\/$/, '')}/api/producers/?page_size=50${query}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -44,7 +44,13 @@ export default function ProducersListScreen({ navigation }: any) {
       Alert.alert('Erreur', 'Impossible de charger les producteurs');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const refresh = () => {
+    setRefreshing(true);
+    loadProducers();
   };
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export default function ProducersListScreen({ navigation }: any) {
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Aucun producteur trouvé</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.primary} />}>
           {producers.map(producer => (
             <TouchableOpacity
               key={producer.id}

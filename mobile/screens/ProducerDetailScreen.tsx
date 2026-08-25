@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -15,24 +15,32 @@ export default function ProducerDetailScreen({ route }: any) {
   const producer = route.params.producer;
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { (async () => {
+  const loadParcels = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError(false);
     try {
       const token = await AsyncStorage.getItem('user_token');
       const response = await fetch(`${API_URL.replace(/\/$/, '')}/api/producers/${producer.id}/parcels/`, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.ok) setParcels(await response.json());
-    } finally { setLoading(false); }
-  })(); }, [producer.id]);
+      if (!response.ok) throw new Error('Chargement impossible');
+      setParcels(await response.json());
+    } catch { setError(true); }
+    finally { setLoading(false); setRefreshing(false); }
+  };
+
+  useEffect(() => { loadParcels(); }, [producer.id]);
 
   const area = parcels.reduce((sum, parcel) => sum + Number(parcel.area || 0), 0);
-  return <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
+  return <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadParcels(true)} tintColor={theme.primary} />}>
     <View style={[styles.summary, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <Text style={[styles.name, { color: theme.text }]}>{producer.name}</Text>
       <Text style={[styles.code, { color: theme.primary }]}>{producer.code}</Text>
       <View style={styles.metrics}><Metric label="Parcelles" value={String(parcels.length)} color={theme.text} /><Metric label="Surface totale" value={`${area.toFixed(2)} ha`} color={theme.text} /></View>
     </View>
     <Text style={[styles.heading, { color: theme.text }]}>Mes parcelles</Text>
-    {loading ? <ActivityIndicator color={theme.primary} /> : parcels.length === 0 ? <Text style={{ color: theme.textMuted }}>Aucune parcelle renseignée</Text> : parcels.map(parcel => <View key={parcel.id} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    {loading ? <ActivityIndicator color={theme.primary} /> : error ? <Text style={{ color: theme.error }}>Impossible de charger les parcelles. Tirez pour réessayer.</Text> : parcels.length === 0 ? <Text style={{ color: theme.textMuted }}>Aucune parcelle renseignée</Text> : parcels.map(parcel => <View key={parcel.id} style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.line}><Text style={[styles.parcelCode, { color: theme.text }]}>{parcel.code}</Text><Text style={[styles.area, { color: theme.primary }]}>{Number(parcel.area).toFixed(2)} ha</Text></View>
       <Text style={{ color: theme.textSecondary }}>{parcel.main_crop || 'Non renseigné'} {parcel.intercrop ? `· ${parcel.intercrop}` : ''}</Text>
       <Text style={[styles.small, { color: theme.textMuted }]}>{label[parcel.conversion_status || ''] || 'Non renseigné'}{parcel.conversion_level ? ` (${parcel.conversion_level})` : ''}</Text>

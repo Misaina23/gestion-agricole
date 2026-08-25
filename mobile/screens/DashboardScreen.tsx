@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
@@ -40,9 +40,9 @@ export default function DashboardScreen({ navigation }: any) {
   const [pendingCount, setPendingCount] = useState(0);
   const [syncedCount, setSyncedCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
-  const [wasOffline, setWasOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const wasOfflineRef = useRef(false);
 
   const getInitials = (email: string): string => {
     if (!email) return '?';
@@ -59,14 +59,14 @@ export default function DashboardScreen({ navigation }: any) {
     const unsubscribe = NetInfo.addEventListener(state => {
       const connected = state.isConnected ?? false;
       setIsOnline(connected);
-      if (connected && wasOffline) {
+      if (connected && wasOfflineRef.current) {
         alert('Connexion rétablie', 'Vous êtes de nouveau en ligne', 'success');
       }
-      setWasOffline(!connected);
+      wasOfflineRef.current = !connected;
     });
     loadData();
     return () => unsubscribe();
-  }, [wasOffline, alert]);
+  }, [alert]);
 
   const loadData = async () => {
     const records = getPendingRecords();
@@ -159,7 +159,7 @@ export default function DashboardScreen({ navigation }: any) {
       async () => {
         await logout();
       },
-      () => {},
+      () => { },
       'Déconnexion',
       'Annuler'
     );
@@ -170,82 +170,83 @@ export default function DashboardScreen({ navigation }: any) {
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={loadData} tintColor={theme.primary} />}
       >
-      <View style={styles.headerRow}>
-        <View style={styles.headerCenter}>
-          <View style={[styles.initialsBadge, { backgroundColor: theme.navyMuted }]}>
-            <Text style={[styles.initialsText, { color: theme.navy }]}>
-              {getInitials(userEmail)}
-            </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerCenter}>
+            <View style={[styles.initialsBadge, { backgroundColor: theme.navyMuted }]}>
+              <Text style={[styles.initialsText, { color: theme.navy }]}>
+                {getInitials(userEmail)}
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: isOnline ? theme.successBg : theme.errorBg }]}>
+              <View style={[styles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
+              <Text style={[styles.statusText, { color: isOnline ? theme.success : theme.error }]}>
+                {isOnline ? 'En ligne' : 'Mode hors ligne'}
+              </Text>
+            </View>
           </View>
-          <View style={[styles.statusPill, { backgroundColor: isOnline ? theme.successBg : theme.errorBg }]}>
-            <View style={[styles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
-            <Text style={[styles.statusText, { color: isOnline ? theme.success : theme.error }]}>
-              {isOnline ? 'En ligne' : 'Mode hors ligne'}
-            </Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={toggleTheme}
+            >
+              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={20} color={theme.error} />
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-            onPress={toggleTheme}
-          >
-            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={20} color={theme.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
-          <View style={[styles.statIconWrap, { backgroundColor: theme.warningBg }]}>
-            <Ionicons name="cloud-offline-outline" size={22} color={theme.warning} />
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
+            <View style={[styles.statIconWrap, { backgroundColor: theme.warningBg }]}>
+              <Ionicons name="cloud-offline-outline" size={22} color={theme.warning} />
+            </View>
+            <Text style={[styles.statNumber, { color: theme.text }]}>{pendingCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Non synchronisées</Text>
           </View>
-          <Text style={[styles.statNumber, { color: theme.text }]}>{pendingCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.textMuted }]}>Non synchronisées</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
-          <View style={[styles.statIconWrap, { backgroundColor: theme.successBg }]}>
-            <Ionicons name="cloud-done-outline" size={22} color={theme.success} />
+          <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderLight }]}>
+            <View style={[styles.statIconWrap, { backgroundColor: theme.successBg }]}>
+              <Ionicons name="cloud-done-outline" size={22} color={theme.success} />
+            </View>
+            <Text style={[styles.statNumber, { color: theme.text }]}>{syncedCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Synchronisées</Text>
           </View>
-          <Text style={[styles.statNumber, { color: theme.text }]}>{syncedCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.textMuted }]}>Synchronisées</Text>
         </View>
-      </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.navy }]}>Actions rapides</Text>
+        <Text style={[styles.sectionTitle, { color: theme.navy }]}>Actions rapides</Text>
 
-      <View style={styles.actionsGrid}>
-        <ActionCard icon="add-circle-outline" title="Nouvelle Collecte" subtitle="Saisir les données producteur" onPress={() => navigation.navigate('Collecte')} theme={theme} />
-        <ActionCard icon="clipboard-outline" title="Nouvelle Inspection" subtitle="Évaluer la conformité" onPress={() => navigation.navigate('Inspection')} theme={theme} />
-        <ActionCard icon="qr-code-outline" title="Scanner QR" subtitle="Producteurs / Parcelles" onPress={() => navigation.navigate('QRScanner')} theme={theme} />
-        <ActionCard icon="id-card-outline" title="Scanner CIN" subtitle="Lecture automatique" onPress={() => navigation.navigate('CINScan')} theme={theme} />
-        <ActionCard icon="people-outline" title="Producteurs" subtitle="Rechercher et pré-remplir" onPress={() => navigation.navigate('ProducersList')} theme={theme} />
-        <ActionCard icon="camera-outline" title="Photos" subtitle="Galerie ou appareil photo" onPress={() => navigation.navigate('PhotoUpload', { type: 'parcel' })} theme={theme} />
-        <ActionCard icon="time-outline" title="Historique" subtitle="Voir l'historique" onPress={() => navigation.navigate('History')} theme={theme} />
-      </View>
+        <View style={styles.actionsGrid}>
+          <ActionCard icon="add-circle-outline" title="Nouvelle Collecte" subtitle="Saisir les données producteur" onPress={() => navigation.navigate('Collecte')} theme={theme} />
+          <ActionCard icon="clipboard-outline" title="Nouvelle Inspection" subtitle="Évaluer la conformité" onPress={() => navigation.navigate('Inspection')} theme={theme} />
+          <ActionCard icon="qr-code-outline" title="Scanner QR" subtitle="Producteurs / Parcelles" onPress={() => navigation.navigate('QRScanner')} theme={theme} />
+          <ActionCard icon="id-card-outline" title="Scanner CIN" subtitle="Lecture automatique" onPress={() => navigation.navigate('CINScan')} theme={theme} />
+          <ActionCard icon="people-outline" title="Producteurs" subtitle="Rechercher et pré-remplir" onPress={() => navigation.navigate('ProducersList')} theme={theme} />
+          <ActionCard icon="camera-outline" title="Photos" subtitle="Galerie ou appareil photo" onPress={() => navigation.navigate('PhotoUpload', { type: 'parcel' })} theme={theme} />
+          <ActionCard icon="time-outline" title="Historique" subtitle="Voir l'historique" onPress={() => navigation.navigate('History')} theme={theme} />
+        </View>
 
-      <TouchableOpacity
-        style={[styles.syncButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-        onPress={syncData}
-        disabled={syncing}
-        activeOpacity={0.85}
-      >
-        <Ionicons name={syncing ? 'sync-outline' : 'sync'} size={22} color={theme.navy} />
-        <Text style={[styles.syncLabel, { color: theme.navy }]}>
-          {syncing ? 'Synchronisation...' : 'Synchroniser les données'}
-        </Text>
-        {pendingCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: theme.navy }]}>
-            <Text style={styles.badgeText}>{pendingCount}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.syncButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+          onPress={syncData}
+          disabled={syncing}
+          activeOpacity={0.85}
+        >
+          <Ionicons name={syncing ? 'sync-outline' : 'sync'} size={22} color={theme.navy} />
+          <Text style={[styles.syncLabel, { color: theme.navy }]}>
+            {syncing ? 'Synchronisation...' : 'Synchroniser les données'}
+          </Text>
+          {pendingCount > 0 && (
+            <View style={[styles.badge, { backgroundColor: theme.navy }]}>
+              <Text style={styles.badgeText}>{pendingCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
