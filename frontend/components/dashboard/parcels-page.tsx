@@ -137,9 +137,14 @@ export function ParcelsPage() {
   }
 
   const handleAdd = async () => {
+    if (!formData.producer || !formData.area) {
+      toast.error("Le producteur et la surface sont obligatoires")
+      return
+    }
     setIsSubmitting(true)
     try {
       await parcelsApi.create({
+        code: `PAR-${Date.now()}`,
         producer: Number(formData.producer),
         area: parseFloat(formData.area) || 0,
         vanilla_plants: parseInt(formData.vanilla_plants) || 0,

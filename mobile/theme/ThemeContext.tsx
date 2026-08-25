@@ -106,7 +106,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(systemScheme === 'dark');
+  const [isDark, setIsDark] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -118,10 +118,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } else if (stored === 'light') {
           setIsDark(false);
         } else {
-          setIsDark(systemScheme === 'dark');
+          setIsDark(true);
         }
       } catch {
-        setIsDark(systemScheme === 'dark');
+        setIsDark(true);
       } finally {
         setInitialized(true);
       }

@@ -318,7 +318,7 @@ export function ProducersPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <p className="text-red-500 mb-2">{t("loadError")}</p>
+          <p className="text-red-500 mb-2">{error instanceof Error ? error.message : t("loadError")}</p>
           <Button onClick={() => refresh()}>{t("retry")}</Button>
         </div>
       </div>

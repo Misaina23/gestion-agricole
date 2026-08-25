@@ -4,12 +4,12 @@
     "slug": "videeko-vanilla",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpg",
+    "icon": "./assets/images/logo.png",
     "scheme": "videeko",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/logo.jpg",
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -26,9 +26,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/logo.jpg",
-        "backgroundImage": "./assets/images/logo.jpg",
-        "monochromeImage": "./assets/images/logo.jpg"
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundImage": "./assets/images/logo.png",
+        "monochromeImage": "./assets/images/logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true,
@@ -37,15 +37,11 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
-      "package": "com.misaina23.videeko.vanilla",
-      "windowSoftInputMode": "adjustResize",
-      "navigationBarColor": "#FFFFFF",
-      "statusBarColor": "#0D9488",
-      "statusBarStyle": "light"
+      "package": "com.misaina23.videeko.vanilla"
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/logo.jpg"
+      "favicon": "./assets/images/logo.png"
     },
     "extra": {
       "apiUrl": "https://gestion-agricole-1-ajdy.onrender.com",

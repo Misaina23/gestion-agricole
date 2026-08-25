@@ -30,23 +30,59 @@ function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null
   const tokens = localStorage.getItem('auth_tokens')
   if (tokens) {
-    const parsed = JSON.parse(tokens)
-    return parsed.access
+    try {
+      const parsed = JSON.parse(tokens)
+      return parsed.access || null
+    } catch {
+      localStorage.removeItem('auth_tokens')
+    }
   }
   return null
 }
 
-async function fetcher<T>(url: string): Promise<T> {
+async function refreshAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem('auth_tokens')
+    const tokens = stored ? JSON.parse(stored) : null
+    if (!tokens?.refresh) return null
+    const response = await fetch(buildApiUrl('/token/refresh/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: tokens.refresh }),
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    localStorage.setItem('auth_tokens', JSON.stringify({ ...tokens, access: data.access }))
+    return data.access
+  } catch {
+    return null
+  }
+}
+
+async function fetcher<T>(url: string, hasRetried = false): Promise<T> {
   const token = getAuthToken()
   const headers = getAuthHeaders(token)
-  
+
   const response = await fetch(buildApiUrl(url), { headers })
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Une erreur est survenue' }))
-    throw new Error(error.detail || `HTTP error ${response.status}`)
+
+  if (response.status === 401 && !hasRetried) {
+    const refreshedToken = await refreshAccessToken()
+    if (refreshedToken) return fetcher<T>(url, true)
   }
-  
+
+  if (response.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('auth_tokens')
+    window.location.assign('/login?reason=session-expired')
+    throw new Error('Session expirée. Veuillez vous reconnecter.')
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: `Erreur HTTP ${response.status}` }))
+    const message = typeof error === 'string' ? error : error.detail || Object.values(error).flat().join(' ')
+    throw new Error(message || `Erreur HTTP ${response.status}`)
+  }
+
   return response.json()
 }
 
@@ -60,7 +96,7 @@ export function useDashboardStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -84,7 +120,7 @@ export function useDashboardActivity() {
       dedupingInterval: 120000,
     }
   )
-  
+
   return {
     activity: data || [],
     isLoading,
@@ -105,7 +141,7 @@ export function useSyncStatus() {
       dedupingInterval: 30000,
     }
   )
-  
+
   return {
     syncStatus: data,
     isLoading,
@@ -135,7 +171,7 @@ export function useParcelMapData(params?: Record<string, string>) {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     mapData: (data || []).map((p) => ({
       ...p,
@@ -150,7 +186,7 @@ export function useParcelMapData(params?: Record<string, string>) {
 export function useProducers(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/producers/${query}`
-  
+
   const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<Producer>>(
     key,
     fetcher,
@@ -158,7 +194,7 @@ export function useProducers(params?: Record<string, string>) {
       revalidateOnFocus: false,
     }
   )
-  
+
   return {
     producers: data?.results || [],
     total: data?.count || 0,
@@ -173,7 +209,7 @@ export function useProducer(id: number | null) {
     id ? `/producers/${id}/` : null,
     fetcher
   )
-  
+
   return {
     producer: data,
     isLoading,
@@ -191,7 +227,7 @@ export function useProducerStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -203,7 +239,7 @@ export function useProducerStats() {
 export function useParcels(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/parcels/${query}`
-  
+
   const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<Parcel>>(
     key,
     fetcher,
@@ -211,7 +247,7 @@ export function useParcels(params?: Record<string, string>) {
       revalidateOnFocus: false,
     }
   )
-  
+
   return {
     parcels: data?.results || [],
     total: data?.count || 0,
@@ -226,7 +262,7 @@ export function useParcel(id: number | null) {
     id ? `/parcels/${id}/` : null,
     fetcher
   )
-  
+
   return {
     parcel: data,
     isLoading,
@@ -259,7 +295,7 @@ export function useUnits(params?: Record<string, string>) {
 export function useUsers(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/accounts/users/${query}`
-  
+
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<any>>(
     key,
     fetcher,
@@ -267,7 +303,7 @@ export function useUsers(params?: Record<string, string>) {
       revalidateOnFocus: false,
     }
   )
-  
+
   return {
     data: data?.results || [],
     total: data?.count || 0,
@@ -286,7 +322,7 @@ export function useUserStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -303,7 +339,7 @@ export function useParcelStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -315,7 +351,7 @@ export function useParcelStats() {
 export function useProductions(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/productions/${query}`
-  
+
   const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<Production>>(
     key,
     fetcher,
@@ -323,7 +359,7 @@ export function useProductions(params?: Record<string, string>) {
       revalidateOnFocus: false,
     }
   )
-  
+
   return {
     productions: data?.results || [],
     total: data?.count || 0,
@@ -338,7 +374,7 @@ export function useProduction(id: number | null) {
     id ? `/productions/${id}/` : null,
     fetcher
   )
-  
+
   return {
     production: data,
     isLoading,
@@ -356,7 +392,7 @@ export function useProductionStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -368,7 +404,7 @@ export function useProductionStats() {
 export function useInspections(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : ''
   const key = `/inspections/${query}`
-  
+
   const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<Inspection>>(
     key,
     fetcher,
@@ -376,7 +412,7 @@ export function useInspections(params?: Record<string, string>) {
       revalidateOnFocus: false,
     }
   )
-  
+
   return {
     inspections: data?.results || [],
     total: data?.count || 0,
@@ -391,7 +427,7 @@ export function useInspection(id: number | null) {
     id ? `/inspections/${id}/` : null,
     fetcher
   )
-  
+
   return {
     inspection: data,
     isLoading,
@@ -409,7 +445,7 @@ export function useInspectionStats() {
       dedupingInterval: 60000,
     }
   )
-  
+
   return {
     stats: data,
     isLoading,
@@ -492,9 +528,9 @@ export function useCommunes(regionId?: number) {
       dedupingInterval: 300000,
     }
   )
-  
+
   const communes = Array.isArray(data) ? data : data?.results || []
-  
+
   return {
     communes,
     isLoading,
