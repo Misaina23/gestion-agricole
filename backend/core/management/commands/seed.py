@@ -7,8 +7,9 @@ correct relations:
     Producteur  ->  Parcelle  ->  Récolte (ParcelRegisterHarvest)
 
 The register gives only the latest internal/external inspection dates for a
-producer. Because it gives no inspection ID or parcel reference, those source
-dates stay on ``Producer`` instead of becoming fabricated inspection rows.
+producer. The seed creates dated inspection summaries while keeping the result
+pending and the parcel empty because the workbook provides neither an outcome
+nor a parcel reference.
 
 The command is idempotent (``bulk_create(..., update_conflicts=True)`` on the
 natural keys) and runs inside a single transaction: if anything fails the

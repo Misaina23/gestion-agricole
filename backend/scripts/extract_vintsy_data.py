@@ -53,6 +53,9 @@ def parse_decimal(cell, coordinate=False):
         return None
     raw = str(cell).strip()
     text = raw.replace(" ", "").replace(",", ".")
+    if text.count(".") > 1:
+        parts = [part for part in text.split(".") if part]
+        text = parts[0] + "." + "".join(parts[1:])
     try:
         number = Decimal(text)
     except InvalidOperation:
