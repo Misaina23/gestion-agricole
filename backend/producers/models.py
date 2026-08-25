@@ -2,7 +2,7 @@
 Producer Models
 """
 import re
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from core.models import TimeStampedModel, Region, Commune, Fokontany, District
 
@@ -173,6 +173,7 @@ class Producer(TimeStampedModel):
         return bool(code and cls.CODE_PATTERN.match(code or ''))
 
     @classmethod
+    @transaction.atomic
     def generate_next_code(cls):
         """Generate the next available ABDP-style code (e.g. ``ABDP-001``).
 
@@ -180,7 +181,7 @@ class Producer(TimeStampedModel):
         that deleted numbers are never reused.
         """
         max_seq = 0
-        for producer in cls.objects.all():
+        for producer in cls.objects.select_for_update().all():
             match = cls.CODE_PATTERN.match(producer.code or '')
             if match:
                 seq = int(producer.code.split('-')[-1])
@@ -230,7 +231,15 @@ class Producer(TimeStampedModel):
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = self.generate_next_code()
-        super().save(*args, **kwargs)
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            try:
+                return super().save(*args, **kwargs)
+            except Exception as exc:
+                if attempt < max_attempts - 1 and 'code' in str(exc).lower():
+                    self.code = self.generate_next_code()
+                    continue
+                raise
 
     def __str__(self):
         return f"{self.code} - {self.full_name}"
