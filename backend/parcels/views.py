@@ -13,7 +13,7 @@ from datetime import date
 import qrcode
 import io
 
-from .models import Parcel, ParcelPhoto
+from .models import Parcel, ParcelPhoto, ParcelRegisterHarvest
 from .serializers import (
     ParcelListSerializer,
     ParcelDetailSerializer,
@@ -177,6 +177,26 @@ class ParcelViewSet(viewsets.ModelViewSet):
             'producer__region__name', 'producer__commune__name'
         )
         return Response(list(data))
+
+    @action(detail=False, methods=['get'])
+    def deliveries(self, request):
+        """Expose only quantities explicitly delivered in the source register."""
+        harvests = ParcelRegisterHarvest.objects.filter(
+            delivered_quantity__isnull=False,
+        ).select_related('parcel', 'parcel__producer').order_by('-updated_at')
+        data = [{
+            'id': harvest.id,
+            'producer': harvest.parcel.producer_id,
+            'producer_name': harvest.parcel.producer.name,
+            'producer_code': harvest.parcel.producer.code,
+            'parcel': harvest.parcel_id,
+            'parcel_code': harvest.parcel.code,
+            'period': harvest.period,
+            'crop_slot': harvest.crop_slot,
+            'quantity': harvest.delivered_quantity,
+            'unit': 'kg',
+        } for harvest in harvests]
+        return Response(data)
     
     @action(detail=False, methods=['get'])
     def export(self, request):

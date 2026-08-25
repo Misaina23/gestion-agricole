@@ -533,6 +533,8 @@ export const parcelsApi = {
     }>>(`/parcels/map_data/${query}`)
   },
 
+  registerDeliveries: () => apiFetch<RegisterDelivery[]>('/parcels/deliveries/'),
+
   exportExcel: async (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
     await downloadFile(`/parcels/export/${query}`, `parcelles_export_${Date.now()}.xlsx`)
@@ -697,8 +699,11 @@ export interface AgriAdvice {
 
 export interface AgriRecommendation {
   id: number
-  type: 'yield_improvement' | 'seasonal_tip' | 'maintenance'
-  message: string
+  title?: string
+  description?: string
+  recommendation_type?: 'yield_improvement' | 'seasonal_tip' | 'maintenance' | string
+  type?: 'yield_improvement' | 'seasonal_tip' | 'maintenance'
+  message?: string
   parcel?: number
   parcel_code?: string
   expected_impact?: string
@@ -707,6 +712,15 @@ export interface AgriRecommendation {
 
 export interface MonthlyReport {
   id: number
+  title: string
+  report_type: string
+  period_start: string
+  period_end: string
+  status: string
+  report_data?: {
+    kpis?: Record<string, Record<string, number>>
+    recommendations?: Array<{ title: string; description: string; priority: string; type: string }>
+  } | null
   month: string
   year: number
   summary: string
@@ -759,7 +773,7 @@ export interface AnomaliesResponse {
 export const aiApi = {
   getAdvice: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params)}` : ''
-    return apiFetch<AgriAdvice>(`/ai/advice/${query}`)
+    return apiFetch<AgriAdvice[]>(`/ai/advice/${query}`)
   },
 
   getRecommendations: (params?: Record<string, string>) => {
@@ -784,6 +798,21 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify(body),
     })
+  },
+
+  generateReport: (data: {
+    report_type: string
+    period_start: string
+    period_end: string
+    region?: string
+  }) => apiFetch<MonthlyReport>('/ai/reports/generate_report/', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, include_charts: true, include_recommendations: true }),
+  }),
+
+  listReports: (params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params)}` : ''
+    return apiFetch<PaginatedResponse<MonthlyReport>>(`/ai/reports/${query}`)
   },
 
   getAnomalies: () => apiFetch<AnomaliesResponse>('/ai/anomalies/'),
@@ -864,6 +893,19 @@ export interface Delivery {
   notes?: string
   created_at: string
   updated_at: string
+}
+
+export interface RegisterDelivery {
+  id: number
+  producer: number
+  producer_name: string
+  producer_code: string
+  parcel: number
+  parcel_code: string
+  period: string
+  crop_slot: string
+  quantity: number
+  unit: string
 }
 
 export interface Campaign {

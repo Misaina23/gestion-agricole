@@ -20,6 +20,7 @@ import { ProductionsPage } from "@/components/dashboard/productions-page"
 import { InspectionsPage } from "@/components/dashboard/inspections-page"
 import { UsersPage } from "@/components/dashboard/users-page"
 import { SettingsPage } from "@/components/dashboard/settings-page"
+import { WorkflowsPage } from "@/components/dashboard/workflows-page"
 import { Header } from "@/components/dashboard/header"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { KPICards } from "@/components/dashboard/kpi-cards"
@@ -111,6 +112,8 @@ function DashboardContent() {
         return <CampaignsPage />
       case "inputs":
         return <InputsPage />
+      case "workflows":
+        return <WorkflowsPage />
       case "deliveries":
         return <DeliveriesPage />
       case "users":

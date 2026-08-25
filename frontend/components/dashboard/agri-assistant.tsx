@@ -22,8 +22,11 @@ export interface AgriAdvice {
 
 export interface AgriRecommendation {
   id: number
-  type: string
-  message: string
+  title?: string
+  description?: string
+  recommendation_type?: string
+  type?: string
+  message?: string
   parcel?: number
   parcel_code?: string
   created_at: string
@@ -279,14 +282,15 @@ export default function AgriAssistantPanel() {
                 <li key={rec.id} className="flex items-start gap-3 rounded-2xl border border-border/60 bg-background/60 p-3">
                   <TrendingUp className="mt-0.5 h-5 w-5 text-emerald-500" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{rec.message}</p>
+                    <p className="text-sm font-medium text-foreground">{rec.title || rec.message || "Recommandation agricole"}</p>
+                    {rec.description && <p className="mt-1 text-xs text-muted-foreground">{rec.description}</p>}
                     {rec.parcel_code && (
                       <p className="mt-1 text-xs text-muted-foreground">{t("parcels")}: {rec.parcel_code}</p>
                     )}
                   </div>
                   <Badge variant="outline" className="shrink-0 text-xs">
-                    {rec.type === "yield_improvement" ? t("production") :
-                     rec.type === "seasonal_tip" ? t("thisMonth") : t("maintenance")}
+                    {(rec.recommendation_type || rec.type) === "yield_improvement" ? t("production") :
+                      (rec.recommendation_type || rec.type) === "seasonal_tip" ? t("thisMonth") : t("maintenance")}
                   </Badge>
                 </li>
               ))}

@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count, Sum, Q, F
+from django.db.models import Count, Sum, Q, F, Avg
 from django.utils import timezone
 from datetime import timedelta, date
 import random
@@ -148,7 +148,7 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
         from producers.models import Producer, Parcel
         from productions.models import Production
 
-        producers = Producer.objects.filter(registered_by=user)
+        producers = visible_producers(user)
         if not producers.exists():
             return {
                 'response': (
@@ -589,7 +589,7 @@ class AgriculturalAdviceView(viewsets.ViewSet):
         now = timezone.now()
         recent_limit = now - timedelta(days=90)
 
-        producers_qs = Producer.objects.filter(registered_by=user)
+        producers_qs = visible_producers(user)
         parcels_qs = Parcel.objects.filter(producer__in=producers_qs)
         productions_qs = Production.objects.filter(parcel__in=parcels_qs)
 

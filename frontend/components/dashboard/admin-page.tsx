@@ -19,56 +19,16 @@ export function AdminPage() {
   const [workbook, setWorkbook] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const sections: AdminSection[] = [
-    {
-      icon: Leaf,
-      title: "Paramétrage des cultures",
-      description: "Gérer les types de cultures et variétés",
-      id: "cultures",
-    },
-    {
-      icon: MapPin,
-      title: "Régions et districts",
-      description: "Gestion des zones géographiques",
-      id: "regions",
-    },
-    {
-      icon: Repeat,
-      title: "Workflows de validation",
-      description: "Configuration des processus de validation",
-      id: "workflows",
-    },
-    {
-      icon: FileBarChart,
-      title: "Formulaires de collecte",
-      description: "Personnalisation des formulaires",
-      id: "forms",
-    },
-    {
-      icon: Database,
-      title: "Référentiels",
-      description: "Gestion des listes de référence",
-      id: "references",
-    },
-    {
-      icon: Bell,
-      title: "Notifications",
-      description: "Configuration des alertes",
-      id: "notifications",
-    },
-    {
-      icon: Shield,
-      title: "Sauvegardes",
-      description: "Gestion des backups",
-      id: "backups",
-    },
+    { icon: Leaf, title: "Paramétrage des cultures", description: "Gérer les campagnes et cultures", id: "campaigns" },
+    { icon: MapPin, title: "Régions et districts", description: "Consulter les zones géographiques", id: "producers" },
+    { icon: Repeat, title: "Workflows de validation", description: "Suivre les validations opérationnelles", id: "workflows" },
+    { icon: FileBarChart, title: "Formulaires de collecte", description: "Saisir producteurs, parcelles et productions", id: "productions" },
+    { icon: Database, title: "Référentiels", description: "Consulter les données de référence", id: "parcels" },
+    { icon: Bell, title: "Notifications", description: "Configurer les préférences de notification", id: "settings" },
   ]
 
   const handleSectionClick = (section: AdminSection) => {
-    if (section.id === "notifications") {
-      router.push("/dashboard?tab=settings")
-      return
-    }
-    infoAlert("En développement", `La section "${section.title}" sera disponible prochainement.`)
+    router.push(`/dashboard?tab=${section.id}`)
   }
 
   const handleImport = async () => {
