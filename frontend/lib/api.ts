@@ -29,6 +29,7 @@ export interface Producer {
   district_name?: string | null
   commune: number
   commune_name?: string
+  site_name?: string
   fokontany?: number | null
   fokontany_name?: string | null
   joined_at?: string | null
@@ -66,6 +67,7 @@ export interface Parcel {
   producer_name?: string
   producer_code?: string
   region_name?: string
+  site_name?: string
   commune_name?: string
   registration_date?: string | null
   area: number
@@ -860,44 +862,21 @@ export interface Delivery {
   updated_at: string
 }
 
-export const deliveriesApi = {
-  list: (params?: Record<string, string>) => {
-    const query = params ? `?${new URLSearchParams(params)}` : ''
-    return apiFetch<PaginatedResponse<Delivery>>(`/deliveries/deliveries/${query}`)
-  },
-  get: (id: number) => apiFetch<Delivery>(`/deliveries/deliveries/${id}/`),
-  create: (data: Partial<Delivery>) =>
-    apiFetch<Delivery>('/deliveries/deliveries/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: number, data: Partial<Delivery>) =>
-    apiFetch<Delivery>(`/deliveries/deliveries/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    apiFetch<void>(`/deliveries/deliveries/${id}/`, { method: 'DELETE' }),
-  stats: () => apiFetch<Record<string, number>>('/deliveries/stats/'),
-}
-
 export interface Campaign {
   id: number
   name: string
+  code: string
   description?: string
   start_date: string
   end_date: string
-  culture: number
-  culture_name?: string
-  region: number
-  region_name?: string
-  objectives?: Record<string, number>
-  budget?: number
   status: 'active' | 'completed' | 'pending' | 'cancelled'
-  managed_by?: number
-  managed_by_name?: string
+  status_display?: string
+  region?: number | null
+  region_name?: string
+  culture?: number | null
+  culture_name?: string
+  budget?: number | null
   producers_count?: number
-  is_active: boolean
   created_at: string
   updated_at: string
 }

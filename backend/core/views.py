@@ -345,14 +345,6 @@ def dashboard_stats(request):
         .values('id', 'code', 'name', 'status', 'parcels_count', 'created_at', region_name=F('region__name'))
     )
 
-    delivery_agg = Delivery.objects.aggregate(
-        total=Count('id'),
-        pending=Count('id', filter=Q(status='pending')),
-        in_transit=Count('id', filter=Q(status='in_transit')),
-        delivered=Count('id', filter=Q(status='delivered')),
-        total_quantity=Sum('quantity'),
-        total_revenue=Sum('total_price'),
-    )
     campaign_agg = Campaign.objects.aggregate(
         total=Count('id'),
         active=Count('id', filter=Q(status='active')),
@@ -371,14 +363,6 @@ def dashboard_stats(request):
         'parcels': parcel_stats,
         'productions': production_stats,
         'inspections': inspection_stats,
-        'deliveries': {
-            'total': delivery_agg['total'],
-            'pending': delivery_agg['pending'],
-            'in_transit': delivery_agg['in_transit'],
-            'delivered': delivery_agg['delivered'],
-            'total_quantity': float(delivery_agg['total_quantity'] or 0),
-            'total_revenue': float(delivery_agg['total_revenue'] or 0),
-        },
         'campaigns': {
             'total': campaign_agg['total'],
             'active': campaign_agg['active'],

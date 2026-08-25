@@ -7,7 +7,6 @@ import {
   inspectionsApi,
   dashboardApi,
   coreApi,
-  deliveriesApi,
   trainingsApi,
   inputsApi,
   workflowsApi,
@@ -19,7 +18,6 @@ import {
   type DashboardStats,
   type Culture,
   type PaginatedResponse,
-  type Delivery,
   type InputDistribution,
   type Campaign,
   type ActivityLogEntry,
@@ -502,39 +500,6 @@ export function useCommunes(regionId?: number) {
     isLoading,
     error,
   }
-}
-
-// Deliveries hooks
-export function useDeliveries(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : ''
-  const key = `/deliveries/deliveries/${query}`
-  const { data, error, isLoading, mutate: refresh } = useSWR<PaginatedResponse<Delivery>>(
-    key,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-    }
-  )
-  
-  return {
-    deliveries: data?.results || [],
-    total: data?.count || 0,
-    isLoading,
-    error,
-    refresh,
-  }
-}
-
-export function useDeliveryStats() {
-  const { data, error, isLoading } = useSWR<DashboardStats['deliveries']>(
-    '/deliveries/stats/',
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    }
-  )
-  return { stats: data, isLoading, error }
 }
 
 // Trainings hooks

@@ -23,6 +23,7 @@ class ParcelListSerializer(serializers.ModelSerializer):
     producer_name = serializers.CharField(source='producer.name', read_only=True)
     producer_code = serializers.CharField(source='producer.code', read_only=True)
     region_name = serializers.CharField(source='producer.region.name', read_only=True)
+    site_name = serializers.CharField(source='producer.unit_name', read_only=True)
     variety_name = serializers.CharField(source='variety.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     plant_density = serializers.ReadOnlyField()
@@ -33,7 +34,7 @@ class ParcelListSerializer(serializers.ModelSerializer):
         model = Parcel
         fields = [
             'id', 'code', 'name', 'producer', 'producer_name', 'producer_code',
-            'region_name', 'latitude', 'longitude', 'area', 'vanilla_plants',
+            'region_name', 'site_name', 'latitude', 'longitude', 'area', 'vanilla_plants',
             'main_crop', 'intercrop', 'conversion_status', 'conversion_level',
             'estimated_yield', 'eu_status', 'nop_status',
             'register_harvests',
@@ -48,6 +49,7 @@ class ParcelDetailSerializer(serializers.ModelSerializer):
     producer_name = serializers.CharField(source='producer.name', read_only=True)
     producer_code = serializers.CharField(source='producer.code', read_only=True)
     region_name = serializers.CharField(source='producer.region.name', read_only=True)
+    site_name = serializers.CharField(source='producer.unit_name', read_only=True)
     commune_name = serializers.CharField(source='producer.commune.name', read_only=True)
     variety_name = serializers.CharField(source='variety.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -62,7 +64,7 @@ class ParcelDetailSerializer(serializers.ModelSerializer):
         model = Parcel
         fields = [
             'id', 'code', 'name', 'producer', 'producer_name', 'producer_code',
-            'region_name', 'commune_name',
+            'region_name', 'site_name', 'commune_name',
             'latitude', 'longitude', 'altitude', 'gps_accuracy', 'polygon_coordinates',
             'area', 'vanilla_plants', 'productive_plants', 'variety', 'variety_name',
             'main_crop', 'intercrop', 'conversion_status', 'conversion_level', 'conversion_start_date',

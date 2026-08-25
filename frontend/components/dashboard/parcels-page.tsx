@@ -355,7 +355,7 @@ export function ParcelsPage() {
               <TableRow className="bg-muted/80 hover:bg-muted/80 dark:bg-muted/70 dark:hover:bg-muted/70">
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Code</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f]">Producteur</TableHead>
-                <TableHead className="font-semibold text-[#1e3a5f]">Commune</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f]">Site</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] text-center">Surface (ha)</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f]">Culture / interculture</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] text-center">Pieds</TableHead>
@@ -381,7 +381,7 @@ export function ParcelsPage() {
                         <p className="text-xs text-[#5a7a9a] font-mono">{parcel.producer_code || '-'}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#5a7a9a]">{parcel.commune_name || '-'}</TableCell>
+                    <TableCell className="text-[#5a7a9a]">{parcel.site_name || '-'}</TableCell>
                     <TableCell className="text-center font-semibold text-[#1e3a5f]">{toNumber(parcel.area).toFixed(2)}</TableCell>
                     <TableCell>
                       <p className="font-medium text-[#0a1628]">{parcel.main_crop || 'Non renseigné'}</p>
@@ -463,7 +463,7 @@ export function ParcelsPage() {
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Map className="w-5 h-5" />
@@ -591,7 +591,7 @@ export function ParcelsPage() {
 
       {/* Edit Dialog */}
       <Dialog key={`edit-${selectedParcel?.id || 'none'}`} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Edit className="w-5 h-5" />
@@ -724,8 +724,8 @@ export function ParcelsPage() {
                    <p className="font-medium text-[#0a1628]">{selectedParcel.region_name || '-'}</p>
                  </div>
                  <div className="space-y-1">
-                   <p className="text-xs text-[#5a7a9a]">Commune</p>
-                   <p className="font-medium text-[#0a1628]">{selectedParcel.commune_name || '-'}</p>
+                   <p className="text-xs text-[#5a7a9a]">Site</p>
+                   <p className="font-medium text-[#0a1628]">{selectedParcel.site_name || '-'}</p>
                  </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Maximize2 className="w-3 h-3" /> Surface</p>

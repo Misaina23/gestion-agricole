@@ -65,7 +65,6 @@ INSTALLED_APPS = [
     "inputs",
     "projects",
     "tasks",
-    "deliveries",
     "finance",
     "documents",
     "trainings",

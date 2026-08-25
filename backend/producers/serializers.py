@@ -37,7 +37,7 @@ class ProducerListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     name = serializers.CharField(source='full_name', read_only=True)
     region_name = serializers.CharField(source='region.name', read_only=True)
-    commune_name = serializers.CharField(source='commune.name', read_only=True)
+    site_name = serializers.CharField(source='unit_name', read_only=True)
     district_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     parcels_count = serializers.ReadOnlyField(source='ann_parcels_count')
@@ -48,7 +48,7 @@ class ProducerListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'name', 'last_name', 'first_name', 'unit_name',
             'phone', 'region', 'region_name',
-            'district', 'district_name', 'commune', 'commune_name', 'fokontany',
+            'district', 'district_name', 'commune', 'commune_name', 'site_name', 'fokontany',
             'status', 'status_display', 'risk_category', 'eu_status', 'nop_status',
             'joined_at', 'parcels_count', 'total_area', 'created_at'
         ]
@@ -61,7 +61,7 @@ class ProducerDetailSerializer(serializers.ModelSerializer):
     """Full serializer for detail views"""
     name = serializers.CharField(source='full_name', read_only=True)
     region_name = serializers.CharField(source='region.name', read_only=True)
-    commune_name = serializers.CharField(source='commune.name', read_only=True)
+    site_name = serializers.CharField(source='unit_name', read_only=True)
     district_name = serializers.SerializerMethodField()
     fokontany_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -75,7 +75,7 @@ class ProducerDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'name', 'last_name', 'first_name', 'unit_name',
             'phone', 'region', 'region_name', 'district', 'district_name',
-            'commune', 'commune_name', 'fokontany', 'fokontany_name',
+            'commune', 'commune_name', 'site_name', 'fokontany', 'fokontany_name',
             'status', 'status_display',
             'joined_at', 'risk_category', 'identified_risks',
             'member_processing', 'processing_activities',

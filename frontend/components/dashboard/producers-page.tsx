@@ -238,7 +238,7 @@ export function ProducersPage() {
       unit_name: producer.unit_name || "",
       region: producer.region?.toString() || "",
       district: producer.district?.toString() || "",
-      commune: producer.commune?.toString() || "",
+      commune: producer.site_name?.toString() || "",
       phone: producer.phone || "",
       joined_at: producer.joined_at || "",
       risk_category: producer.risk_category || "low",
@@ -414,7 +414,7 @@ export function ProducersPage() {
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Code</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Nom</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Région</TableHead>
-                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Commune</TableHead>
+                <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Site</TableHead>
                 <TableHead className="text-center font-semibold text-[#1e3a5f] dark:text-foreground">Parcelles</TableHead>
                 <TableHead className="font-semibold text-[#1e3a5f] dark:text-foreground">Statut</TableHead>
                 <TableHead className="text-right font-semibold text-[#1e3a5f] dark:text-foreground">Actions</TableHead>
@@ -435,7 +435,7 @@ export function ProducersPage() {
                       {[producer.last_name, producer.first_name].filter(Boolean).join(' ') || producer.code}
                     </TableCell>
                     <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{producer.region_name || producer.region}</TableCell>
-                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{producer.commune_name || producer.commune}</TableCell>
+                    <TableCell className="text-[#5a7a9a] dark:text-muted-foreground">{producer.site_name || producer.site_name}</TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground dark:bg-muted/80 dark:text-foreground">
                         {producer.parcels_count || 0}
@@ -513,7 +513,7 @@ export function ProducersPage() {
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Users className="w-5 h-5" />
@@ -581,7 +581,7 @@ export function ProducersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Commune</label>
+                <label className="text-sm font-medium text-[#0a1628]">Site</label>
                 <Select value={formData.commune} onValueChange={(value) => setFormData({ ...formData, commune: value })}>
                   <SelectTrigger className="border-[#c5ddf5]">
                     <SelectValue placeholder={isLoadingCommunes ? "Chargement..." : "Sélectionner"} />
@@ -640,7 +640,7 @@ export function ProducersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
               <Edit className="w-5 h-5" />
@@ -705,7 +705,7 @@ export function ProducersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[#0a1628]">Commune</label>
+                <label className="text-sm font-medium text-[#0a1628]">Site</label>
                 <Select value={formData.commune} onValueChange={(value) => setFormData({ ...formData, commune: value })}>
                   <SelectTrigger className="border-[#c5ddf5]">
                     <SelectValue placeholder={isLoadingCommunes ? "Chargement..." : "Sélectionner"} />
@@ -805,8 +805,8 @@ export function ProducersPage() {
                   <p className="font-medium text-[#0a1628]">{selectedProducer.region_name || selectedProducer.region}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-[#5a7a9a]">Commune</p>
-                  <p className="font-medium text-[#0a1628]">{selectedProducer.commune_name || selectedProducer.commune}</p>
+                  <p className="text-xs text-[#5a7a9a]">Site</p>
+                  <p className="font-medium text-[#0a1628]">{selectedProducer.site_name || selectedProducer.commune}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Phone className="w-3 h-3" /> Téléphone</p>

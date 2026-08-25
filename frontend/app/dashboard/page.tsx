@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import nextDynamic from "next/dynamic"
 import { CampaignsPage } from "@/components/dashboard/campaigns-page"
 import { InputsPage } from "@/components/dashboard/inputs-page"
-import { DeliveriesPage } from "@/components/dashboard/deliveries-page"
 
 const ParcelsMapPage = nextDynamic(() => import('@/components/dashboard/parcels-map'), { ssr: false })
 const ReportsPage = nextDynamic(() => import('@/components/dashboard/reports-page'), { ssr: false })
@@ -111,8 +110,6 @@ function DashboardContent() {
         return <CampaignsPage />
       case "inputs":
         return <InputsPage />
-      case "deliveries":
-        return <DeliveriesPage />
       case "users":
         if (!canAccessUsers) {
           return (

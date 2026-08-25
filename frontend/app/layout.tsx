@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning className="bg-background">
       <body className="min-h-screen bg-background font-sans text-foreground antialiased transition-colors duration-300">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <LanguageProvider>
               {children}

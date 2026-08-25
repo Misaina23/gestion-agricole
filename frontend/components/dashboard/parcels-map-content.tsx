@@ -526,7 +526,7 @@ export default function MapContent({
                         )}
                         {parcel.commune && (
                           <div className="text-xs text-[#5a7a9a]">
-                            <span className="font-medium">Commune :</span> {parcel.commune}
+                            <span className="font-medium">Site :</span> {parcel.commune}
                           </div>
                         )}
                         {parcel.latitude != null && parcel.longitude != null && (
