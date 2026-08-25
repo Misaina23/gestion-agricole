@@ -34,6 +34,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 
 from core.models import Region, District, Commune, Fokontany
 from producers.models import Producer

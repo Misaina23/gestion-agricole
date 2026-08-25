@@ -156,7 +156,7 @@ def dashboard_stats(request):
     from productions.models import Production
     from inspections.models import Inspection
     from accounts.models import User
-    from deliveries.models import Delivery
+
     from campaigns.models import Campaign, CampaignProducer
     from inputs.models import InputDistribution
 
