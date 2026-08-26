@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   Map,
   Search,
@@ -45,7 +46,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useParcels, invalidateParcels, useRegions, useProducers } from "@/lib/hooks"
+import { useParcels, invalidateParcels, useRegions, useProducers, useParcel } from "@/lib/hooks"
 import { parcelsApi, type Parcel } from "@/lib/api"
 import { toast } from "sonner"
 import { confirmDelete, successAlert, errorAlert } from "@/lib/sweetalert"
@@ -87,6 +88,12 @@ export function ParcelsPage() {
     conversion_status: "organic",
     conversion_level: "",
   })
+
+  const searchParams = useSearchParams()
+  const parcelQueryId = searchParams.get('parcel')
+  const parcelAction = searchParams.get('action')
+  const isQueryParcel = parcelQueryId ? Number(parcelQueryId) : null
+  const { parcel: queryParcel, isLoading: isLoadingQueryParcel } = useParcel(isQueryParcel)
 
   const params: Record<string, string> = { page_size: "4" }
   if (searchQuery) params.search = searchQuery
@@ -253,6 +260,15 @@ export function ParcelsPage() {
       if (ok) handleDelete()
     })
   }
+
+  useEffect(() => {
+    if (parcelAction === 'view' && queryParcel) {
+      openViewDialog(queryParcel)
+    }
+    if (parcelAction === 'edit' && queryParcel) {
+      openEditDialog(queryParcel)
+    }
+  }, [parcelAction, queryParcel])
 
   if (error) {
     return (
@@ -745,7 +761,7 @@ export function ParcelsPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Maximize2 className="w-3 h-3" /> Surface</p>
-                  <p className="font-medium text-[#0a1628]">{(selectedParcel.area || 0).toFixed(2)} ha</p>
+                  <p className="font-medium text-[#0a1628]">{toNumber(selectedParcel.area).toFixed(2)} ha</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><TreeDeciduous className="w-3 h-3" /> Pieds</p>
