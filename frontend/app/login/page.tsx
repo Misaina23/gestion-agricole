@@ -83,8 +83,8 @@ export default function LoginPage() {
             <div className="text-center mb-8">
               <div className="mb-4 flex justify-center">
                 <Image
-                src="/logo.jpg"
-                alt="VIDEEKO VANILLA"
+                src="/logo.png"
+                alt="Vintsy"
                 width={96}
                 height={96}
                 className="rounded-2xl shadow-lg object-contain"
@@ -93,7 +93,7 @@ export default function LoginPage() {
               />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-wide dark:text-white">
-              VIDEEKO <span className="text-[#87ceeb]">VANILLA</span>
+              Vintsy <span className="text-[#87ceeb]">VANILLA</span>
             </h1>
             <p className="text-[#87ceeb]/80 text-sm mt-2 dark:text-[#87ceeb]/60">
               Plateforme de gestion agricole
@@ -180,7 +180,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-white/40 text-xs mt-6 dark:text-white/30">
-          &copy; 2024 VIDEEKO VANILLA. Tous droits réservés.
+          &copy; 2024 Vintsy. Tous droits réservés.
         </p>
       </div>
     </div>

@@ -218,9 +218,9 @@ export function ParcelsPage() {
     setSelectedParcelId(parcelId)
     setSelectedParcel(parcel)
     setFormData({
-      producer: parcel.producer?.toString() || "",
-      area: parcel.area?.toString() || "",
-      vanilla_plants: parcel.vanilla_plants?.toString() || "",
+      producer: parcel.producer != null ? String(parcel.producer) : "",
+      area: parcel.area != null ? String(parcel.area) : "",
+      vanilla_plants: parcel.vanilla_plants != null ? String(parcel.vanilla_plants) : "0",
       main_crop: parcel.main_crop || "",
       intercrop: parcel.intercrop || "",
       latitude: parcel.latitude || "",
@@ -228,11 +228,7 @@ export function ParcelsPage() {
       conversion_status: parcel.conversion_status || "organic",
       conversion_level: parcel.conversion_level || "",
     })
-    try {
-      setIsEditDialogOpen(true)
-    } catch (e) {
-      console.error('[parcels] open edit failed', e)
-    }
+    setIsEditDialogOpen(true)
   }
 
   const openViewDialog = (parcel: Parcel) => {
@@ -387,7 +383,7 @@ export function ParcelsPage() {
             <TableBody>
               {parcels.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-[#5a7a9a]">
+                  <TableCell colSpan={9} className="text-center py-8 text-[#5a7a9a]">
                     Aucune parcelle trouvee
                   </TableCell>
                 </TableRow>
@@ -761,7 +757,7 @@ export function ParcelsPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-[#5a7a9a] flex items-center gap-1"><Calendar className="w-3 h-3" /> Créée le</p>
-                  <p className="font-medium text-[#0a1628]">{new Date(selectedParcel.created_at).toLocaleDateString('fr-FR')}</p>
+                  <p className="font-medium text-[#0a1628]">{selectedParcel.created_at ? new Date(selectedParcel.created_at).toLocaleDateString('fr-FR') : '-'}</p>
                 </div>
               </div>
               <div className="pt-2">

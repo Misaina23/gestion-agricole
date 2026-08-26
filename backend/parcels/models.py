@@ -4,6 +4,7 @@ Parcel Models
 import re
 from django.db import models, transaction
 from django.db.models import Sum, Max
+from django.utils import timezone
 from core.models import TimeStampedModel, VanillaVariety
 
 
@@ -229,26 +230,30 @@ class Parcel(TimeStampedModel):
     @classmethod
     @transaction.atomic
     def generate_next_code(cls, producer=None):
-        """Generate the next available parcel code.
+        """Generate the next available parcel code with year-based sequence (e.g. ``PRC-2026-0001``).
 
         If ``producer`` is provided, the code is scoped per producer
-        (``P1``, ``P2``, ...). Otherwise a global sequence is used.
+        (``PRC-2026-0001``, ``PRC-2026-0002``, ...). Otherwise a global
+        sequence is used.
         """
-        prefix = 'P'
+        year = timezone.now().year
+        prefix = 'PRC'
         qs = cls.objects.select_for_update()
         if producer:
             qs = qs.filter(producer=producer)
-            prefix = f'P{producer.id or ""}'
+            prefix = f'PRC-{producer.id or ""}'
         max_seq = 0
         for parcel in qs.all():
-            match = re.match(r'^P(\d+)$', parcel.code or '')
+            match = re.match(r'^PRC-\d{4}-(\d+)$', parcel.code or '')
             if match:
-                seq = int(match.group(1))
-                if seq > max_seq:
-                    max_seq = seq
+                code_year = int(parcel.code.split('-')[1])
+                if code_year == year:
+                    seq = int(match.group(1))
+                    if seq > max_seq:
+                        max_seq = seq
         if producer:
-            return f'P{producer.id or 0}-{max_seq + 1}'
-        return f'{prefix}{max_seq + 1}'
+            return f'PRC-{producer.id or 0}-{year}-{max_seq + 1:04d}'
+        return f'{prefix}-{year}-{max_seq + 1:04d}'
 
     def save(self, *args, **kwargs):
         if not self.code:

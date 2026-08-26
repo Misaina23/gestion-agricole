@@ -122,7 +122,7 @@ const getErrorMessage = async (response: Response) => {
   }
 };
 
-export const syncPendingRecord = async (record: { id?: number; type: string; data: string }, token: string | null): Promise<void> => {
+export const syncPendingRecord = async (record: { id?: number; type: string; data: string }, token: string | null): Promise<any> => {
   const endpoint = getEndpoint(record.type);
   const payload = JSON.parse(record.data);
 
@@ -135,7 +135,7 @@ export const syncPendingRecord = async (record: { id?: number; type: string; dat
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
 
-  await request(endpoint, {
+  const response = await request(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -146,6 +146,8 @@ export const syncPendingRecord = async (record: { id?: number; type: string; dat
   if (record.id) {
     await markSynced(record.id);
   }
+
+  return response;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -267,19 +269,26 @@ export const getAuthToken = async (): Promise<string | null> => {
   return AsyncStorage.getItem('user_token');
 };
 
-export const autoSync = async (onSync?: (success: number, failed: number) => void): Promise<void> => {
+export interface SyncResult {
+  remaining: number;
+  successCount: number;
+  failCount: number;
+  generatedCodes: Array<{ type: string; code?: string }>;
+}
+
+export const autoSync = async (onSync?: (success: number, failed: number, codes: Array<{ type: string; code?: string }>) => void): Promise<SyncResult> => {
   const netInfo = await NetInfo.fetch();
   if (!netInfo.isConnected) {
-    onSync?.(0, 0);
-    return;
+    onSync?.(0, 0, []);
+    return { remaining: 0, successCount: 0, failCount: 0, generatedCodes: [] };
   }
 
   const records = getPendingRecords();
   let token = await AsyncStorage.getItem('user_token');
 
   if (!token || token === 'null' || token === 'undefined' || records.length === 0) {
-    onSync?.(0, 0);
-    return;
+    onSync?.(0, 0, []);
+    return { remaining: records.length, successCount: 0, failCount: 0, generatedCodes: [] };
   }
 
   if (token.split('.').length !== 3) {
@@ -290,13 +299,14 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
   }
 
   if (!token || token === 'null' || token === 'undefined') {
-    onSync?.(0, 0);
-    return;
+    onSync?.(0, 0, []);
+    return { remaining: records.length, successCount: 0, failCount: 0, generatedCodes: [] };
   }
 
   let successCount = 0;
   let failCount = 0;
   let tokenRefreshed = false;
+  const generatedCodes: Array<{ type: string; code?: string }> = [];
 
   for (const record of records) {
     try {
@@ -309,6 +319,12 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
         timestamp: new Date().toISOString(),
       });
       successCount++;
+      if (data && typeof data === 'object') {
+        const code = (data as any).code || (data as any).producer_code || (data as any).parcel_code;
+        if (code) {
+          generatedCodes.push({ type: record.type, code });
+        }
+      }
     } catch (error: any) {
       const isAuthError = /401|non authent|token|session expirée/i.test(error?.message || '');
       if (isAuthError && !tokenRefreshed) {
@@ -317,7 +333,7 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
         if (ok) {
           token = (await AsyncStorage.getItem('user_token')) || token;
           try {
-            await syncPendingRecord(record, token);
+            const data = await syncPendingRecord(record, token);
             await addSyncLog({
               recordId: record.id,
               endpoint: getEndpoint(record.type),
@@ -326,6 +342,12 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
               timestamp: new Date().toISOString(),
             });
             successCount++;
+            if (data && typeof data === 'object') {
+              const code = (data as any).code || (data as any).producer_code || (data as any).parcel_code;
+              if (code) {
+                generatedCodes.push({ type: record.type, code });
+              }
+            }
             continue;
           } catch (retryErr: any) {
             await addSyncLog({
@@ -356,8 +378,8 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
   }
 
   const remaining = getPendingRecords().length;
-  onSync?.(successCount, failCount);
-  return remaining;
+  onSync?.(successCount, failCount, generatedCodes);
+  return { remaining, successCount, failCount, generatedCodes };
 };
 
 export const setupAutoSyncListener = (callback?: (count: number) => void) => {

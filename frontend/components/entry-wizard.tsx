@@ -277,7 +277,7 @@ export default function EntryWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-[#5a7a9a]">Code parcelle *</label>
-                <Input value={parcel.code} onChange={(e) => setParcel({ ...parcel, code: e.target.value })} placeholder="Ex: PAR-001" />
+                <Input value={parcel.code} onChange={(e) => setParcel({ ...parcel, code: e.target.value })} placeholder="Ex: PRC-2026-0001" />
               </div>
               <div>
                 <label className="text-xs font-medium text-[#5a7a9a]">Superficie (ha) *</label>

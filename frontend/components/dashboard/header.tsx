@@ -42,8 +42,8 @@ export function Header({ activeTab, onTabChange, user, onLogout, onNavigate }: H
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-md">
             <Image
-              src="/logo.jpg"
-              alt="VIDEEKO VANILLA"
+              src="/logo.png"
+              alt="Vintsy"
               width={40}
               height={40}
               className="h-full w-full object-contain"
@@ -51,7 +51,7 @@ export function Header({ activeTab, onTabChange, user, onLogout, onNavigate }: H
           </div>
           <div>
             <div className="text-lg font-semibold tracking-[0.2em]">
-              VIDEEKO <span className="text-sky-300">VANILLA</span>
+              Vintsy <span className="text-sky-300">VANILLA</span>
             </div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-sky-200/70">
               {t("dashboardOverview")}

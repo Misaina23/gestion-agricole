@@ -1,5 +1,5 @@
 """
-Management command to load initial data for VIDEEKO VANILLA
+Management command to load initial data for Vintsy
 """
 from django.core.management.base import BaseCommand
 from core.models import Region, Commune, District, VanillaVariety, QualityGrade, Season
@@ -10,7 +10,7 @@ from datetime import date
 
 
 class Command(BaseCommand):
-    help = 'Load initial reference data for VIDEEKO VANILLA'
+    help = 'Load initial reference data for Vintsy'
 
     def handle(self, *args, **options):
         self.stdout.write('Loading initial data...')

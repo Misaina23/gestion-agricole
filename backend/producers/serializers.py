@@ -105,8 +105,8 @@ class ProducerCreateUpdateSerializer(serializers.ModelSerializer):
 
     The producer code is NEVER provided by the client: it is generated
     automatically (and atomically) by ``Producer.save()`` from the
-    region + district, guaranteeing a unique, sequential code such as
-    ``PRD-REG01-DIS001-0001``.
+    current year and highest existing sequence, guaranteeing a unique,
+    sequential code such as ``PRD-2026-0042``.
     """
     region = serializers.CharField(required=False, allow_blank=True, write_only=True)
     commune = serializers.CharField(required=False, allow_blank=True, write_only=True)

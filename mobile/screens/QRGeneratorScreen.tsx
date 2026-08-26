@@ -98,7 +98,7 @@ export default function QRGeneratorScreen({ route, navigation }: any) {
           style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
           value={searchCode}
           onChangeText={setSearchCode}
-          placeholder="Ex: PRD-01-DIS001-0001"
+          placeholder="Ex: PRD-2026-0042"
           placeholderTextColor={theme.textMuted}
           autoCapitalize="characters"
         />

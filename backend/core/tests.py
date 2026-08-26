@@ -53,7 +53,7 @@ class InitialDataCommandTests(TestCase):
         region = Region.objects.create(name="Analamanga", code="ANM")
         commune = Commune.objects.create(name="Antananarivo", code="ANT01", region=region)
         producer = Producer.objects.create(
-            code="PRD-001",
+            code="PRD-2026-0001",
             name="Rakoto",
             region=region,
             commune=commune,
@@ -61,7 +61,7 @@ class InitialDataCommandTests(TestCase):
             status="active",
         )
         Parcel.objects.create(
-            code="PAR-001",
+            code="PRC-2026-0001",
             producer=producer,
             area=2.5,
             vanilla_plants=200,

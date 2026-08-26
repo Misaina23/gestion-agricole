@@ -1,1 +1,1 @@
-# VIDEEKO VANILLA Django Project
+# Vintsy Django Project

@@ -1,4 +1,4 @@
-# Guide utilisateur — VIDEEKO VANILLA
+# Guide utilisateur — Vintsy
 
 Plateforme de gestion agricole pour la filiale vanille
 
@@ -52,7 +52,7 @@ Plateforme de gestion agricole pour la filiale vanille
 
 ## 1. Présentation générale
 
-VIDEEKO VANILLA est une plateforme numérique complète de gestion de la filière vanille. Elle permet de centraliser, suivre et analyser l\'ensemble des données agricoles, commerciales et administratives liées aux producteurs, parcelles, productions, inspections et livraisons.
+Vintsy est une plateforme numérique complète de gestion de la filière vanille. Elle permet de centraliser, suivre et analyser l'ensemble des données agricoles, commerciales et administratives liées aux producteurs, parcelles, productions, inspections et livraisons.
 
 La plateforme est accessible via deux canaux :
 
@@ -68,7 +68,7 @@ La plateforme est accessible via deux canaux :
 1. Téléchargez le fichier APK fourni par votre administrateur ou votre consultant.
 2. Ouvrez le fichier APK sur votre téléphone Android.
 3. Si votre téléphone demande une autorisation, validez l\'installation depuis **Paramètres > Sécurité > Sources inconnues**.
-4. Lancez l\'application **VIDEEKO VANILLA** depuis le menu des applications.
+4. Lancez l'application **Vintsy** depuis le menu des applications.
 
 ### 2.2 Accès web (navigateur)
 
@@ -471,6 +471,6 @@ Retrouvez rapidement une information :
 
 ## Support
 
-Pour toute assistance technique, veuillez contacter votre administrateur système ou le support technique de VIDEEKO VANILLA.
+Pour toute assistance technique, veuillez contacter votre administrateur système ou le support technique de Vintsy.
 
 Dernière mise à jour du guide : Août 2026

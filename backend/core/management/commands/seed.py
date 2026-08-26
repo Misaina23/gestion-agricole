@@ -1,4 +1,4 @@
-"""Reproducible seed for VIDEEKO VANILLA from the real cooperative register.
+"""Reproducible seed for Vintsy from the real cooperative register.
 
 Reads the JSON files produced by ``scripts/extract_vintsy_data.py`` (the real
 data extracted from the T06 Excel register) and rebuilds the database with
@@ -314,7 +314,7 @@ class Command(BaseCommand):
                 [
                     User(
                         username=nm,
-                        email=f"{nm}@videeko.local",
+                        email=f"{nm}@vintsy.local",
                         first_name=nm,
                         password=make_password(None),
                         role="inspector",

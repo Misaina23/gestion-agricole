@@ -31,16 +31,22 @@ const Stack = createNativeStackNavigator();
 function RootNavigator() {
   const { theme, isDark } = useTheme();
   const { isAuthenticated, loading } = useAuth();
-  const { isOnline, syncStatus, pendingCount, triggerSync } = useAutoSync();
+  const { isOnline, syncStatus, pendingCount, generatedCodes, triggerSync } = useAutoSync();
   const { alert } = useNotification();
 
   useEffect(() => {
-    if (syncStatus === 'success' && pendingCount > 0) {
-      alert('Synchronisation réussie', `${pendingCount} enregistrement(s) synchronisé(s)`, 'success');
+    if (syncStatus === 'success') {
+      const codeMessages = generatedCodes
+        .filter(item => item.code)
+        .map(item => `${item.type === 'collecte_producer' || item.type === 'collecte_parcel' || item.type === 'collecte_financial' ? 'Collecte' : item.type} : ${item.code}`);
+      const message = codeMessages.length > 0
+        ? `${pendingCount} enregistrement(s) synchronisé(s)\n\nCodes attribués :\n${codeMessages.join('\n')}`
+        : `${pendingCount} enregistrement(s) synchronisé(s)`;
+      alert('Synchronisation réussie', message, 'success');
     } else if (syncStatus === 'error') {
       alert('Échec de synchronisation', 'Vérifiez votre connexion', 'error');
     }
-  }, [syncStatus, pendingCount, alert]);
+  }, [syncStatus, pendingCount, generatedCodes, alert]);
 
   const navTheme = isDark
     ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: theme.bg, card: theme.surface, text: theme.text, primary: theme.primary, border: theme.border } }

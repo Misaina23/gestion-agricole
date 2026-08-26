@@ -4,6 +4,7 @@ Producer Models
 import re
 from django.db import models, transaction
 from django.db.models import Sum
+from django.utils import timezone
 from core.models import TimeStampedModel, Region, Commune, Fokontany, District
 
 
@@ -165,8 +166,8 @@ class Producer(TimeStampedModel):
         verbose_name_plural = 'Producteurs'
         ordering = ['-created_at']
 
-    CODE_PATTERN = re.compile(r'^[A-Z]+-\d{3,}$')
-    CODE_PREFIX = 'ABDP'
+    CODE_PATTERN = re.compile(r'^[A-Z]+-\d{4}-\d{4}$')
+    CODE_PREFIX = 'PRD'
 
     @classmethod
     def is_valid_code(cls, code):
@@ -175,19 +176,22 @@ class Producer(TimeStampedModel):
     @classmethod
     @transaction.atomic
     def generate_next_code(cls):
-        """Generate the next available ABDP-style code (e.g. ``ABDP-001``).
+        """Generate the next available code with year-based sequence (e.g. ``PRD-2026-0042``).
 
-        The sequence is derived from the highest existing sequence number so
-        that deleted numbers are never reused.
+        The sequence is derived from the highest existing sequence number for the
+        current year so that deleted numbers are never reused.
         """
+        year = timezone.now().year
         max_seq = 0
         for producer in cls.objects.select_for_update().all():
             match = cls.CODE_PATTERN.match(producer.code or '')
             if match:
-                seq = int(producer.code.split('-')[-1])
-                if seq > max_seq:
-                    max_seq = seq
-        return f"{cls.CODE_PREFIX}-{max_seq + 1:03d}"
+                code_year = int(producer.code.split('-')[1])
+                if code_year == year:
+                    seq = int(producer.code.split('-')[-1])
+                    if seq > max_seq:
+                        max_seq = seq
+        return f"{cls.CODE_PREFIX}-{year}-{max_seq + 1:04d}"
 
     @property
     def full_name(self):

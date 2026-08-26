@@ -82,8 +82,8 @@ export default function RegisterPage() {
           <div className="text-center mb-8">
             <div className="mb-4 flex justify-center">
               <Image
-                src="/logo.jpg"
-                alt="VIDEEKO VANILLA"
+                src="/logo.png"
+                alt="Vintsy"
                 width={96}
                 height={96}
                 className="rounded-2xl shadow-lg object-contain"
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-wide">
-              VIDEEKO <span className="text-[#87ceeb]">VANILLA</span>
+              Vintsy <span className="text-[#87ceeb]">VANILLA</span>
             </h1>
             <p className="text-[#87ceeb]/60 text-sm mt-2">
               Creer un compte
@@ -289,7 +289,7 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center text-white/30 text-xs mt-6">
-          &copy; 2024 VIDEEKO VANILLA. Tous droits reserves.
+          &copy; 2024 Vintsy. Tous droits reserves.
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
-# VIDEEKO VANILLA - Backend Django
+# Vintsy - Backend Django
 
 ## Description
-Backend Django REST API pour l'application de gestion agricole VIDEEKO VANILLA.
+Backend Django REST API pour l'application de gestion agricole Vintsy.
 
 ## Stack Technique
 - Python 3.11+
@@ -30,7 +30,7 @@ pip install -r requirements.txt
 ```bash
 # Creer la base de donnees
 psql -U postgres
-CREATE DATABASE videeko_vanilla;
+CREATE DATABASE vintsy;
 \q
 ```
 
@@ -121,7 +121,7 @@ python manage.py runserver
 ## Structure des dossiers
 ```
 backend/
-├── videeko_vanilla/     # Configuration Django
+├── vintsy/     # Configuration Django
 │   ├── settings.py
 │   ├── urls.py
 │   ├── wsgi.py

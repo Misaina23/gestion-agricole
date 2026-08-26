@@ -7,21 +7,21 @@ import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'VIDEEKO VANILLA - Plateforme de gestion agricole',
+  title: 'Vintsy - Plateforme de gestion agricole',
   description: 'Plateforme de gestion agricole pour la filière vanille',
   generator: 'v0.app',
   icons: {
     icon: [
       {
-        url: '/logo.jpg',
+        url: '/logo.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/logo.jpg',
+        url: '/logo.png',
         media: '(prefers-color-scheme: dark)',
       },
     ],
-    apple: '/logo.jpg',
+    apple: '/logo.png',
   },
 }
 

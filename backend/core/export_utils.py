@@ -199,7 +199,7 @@ def build_export_response(
             title=filename_prefix.capitalize(),
             headers=headers,
             rows=rows,
-            generated_by='VIDEEKO Platform',
+            generated_by='Vintsy Platform',
         )
         return ('application/pdf', content, f'{base_filename}.pdf')
     else:

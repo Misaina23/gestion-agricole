@@ -5,9 +5,11 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { addPendingRecord, initDB, getPendingRecords } from '../lib/db';
+import { API_URL } from '../lib/db';
 import ThemedDatePicker from '../components/ThemedDatePicker';
 
 interface FormData {
@@ -132,13 +134,39 @@ export default function CollecteScreen({ navigation, route }: any) {
     setSearchingProducer(true);
     try {
       const token = await AsyncStorage.getItem('user_token');
-      const url = `${API_URL.replace(/\/$/, '')}/api/producers/?search=${encodeURIComponent(query)}&page_size=20`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setProducerResults(data.results || []);
-      } else {
-        setProducerResults([]);
+      const baseUrl = `${API_URL.replace(/\/$/, '')}/api/producers/`;
+      
+      // Try exact code match first
+      const exactUrl = `${baseUrl}?search=${encodeURIComponent(query.trim())}&page_size=1`;
+      const exactRes = await fetch(exactUrl, { headers: { Authorization: `Bearer ${token}` } });
+      let producerResults: any[] = [];
+      if (exactRes.ok) {
+        const data = await exactRes.json();
+        producerResults = data.results || [];
+      }
+      
+      // If no exact match, try broader search
+      if (producerResults.length === 0) {
+        const searchUrl = `${baseUrl}?search=${encodeURIComponent(query)}&page_size=10`;
+        const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` } });
+        if (searchRes.ok) {
+          const data = await searchRes.json();
+          producerResults = data.results || [];
+        }
+      }
+      
+      setProducerResults(producerResults);
+      
+      // Auto-fill if exact match found
+      if (producerResults.length === 1) {
+        const producer = producerResults[0];
+        const exactMatch = producer.code?.toLowerCase() === query.trim().toLowerCase();
+        if (exactMatch) {
+          updateField('codeProducteur', producer.code);
+          updateField('nomPrenom', producer.name || '');
+          setProducerSearch(producer.code);
+          setProducerResults([]);
+        }
       }
     } catch {
       setProducerResults([]);
@@ -345,7 +373,7 @@ export default function CollecteScreen({ navigation, route }: any) {
                 onPress={() => {
                   updateField('codeProducteur', producer.code);
                   updateField('nomPrenom', producer.name || '');
-                  setProducerSearch('');
+                  setProducerSearch(producer.code);
                   setProducerResults([]);
                 }}
               >

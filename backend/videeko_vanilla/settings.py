@@ -1,5 +1,5 @@
 """
-Django settings for VIDEEKO VANILLA project.
+Django settings for Vintsy project.
 """
 
 import os
@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
-    "django-insecure-videeko-vanilla-dev-key-change-in-production"
+    "django-insecure-vintsy-dev-key-change-in-production"
 )
 
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"

@@ -1,5 +1,5 @@
 """
-Custom User Model for VIDEEKO VANILLA
+Custom User Model for Vintsy
 """
 import uuid
 

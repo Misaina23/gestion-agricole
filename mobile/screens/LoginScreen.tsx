@@ -28,7 +28,7 @@ export default function LoginScreen({ navigation }: any) {
       if (!result.success) {
         alert('Erreur', result.error || 'Identifiants incorrects', 'error');
       } else {
-        alert('Connexion réussie', 'Bienvenue sur VIDEEKO VANILLA', 'success');
+        alert('Connexion réussie', 'Bienvenue sur Vintsy', 'success');
       }
     } catch {
       alert('Erreur', 'Connexion échouée', 'error');
@@ -51,14 +51,10 @@ export default function LoginScreen({ navigation }: any) {
 
       <View style={styles.logoContainer}>
         <Image
-          source={require('../assets/images/logo.jpg')}
+          source={require('../assets/images/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={[styles.title, { color: theme.primary }]}>VIDEEKO VANILLA</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          Plateforme de gestion agricole
-        </Text>
       </View>
 
       <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>

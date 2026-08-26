@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Videeko Mobile",
-    "slug": "videeko-vanilla",
+    "name": "Vintsy Mobile",
+    "slug": "vintsy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "videeko",
+    "scheme": "vintsy",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -37,7 +37,7 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
-      "package": "com.misaina23.videeko.vanilla"
+      "package": "com.misaina23.vintsy"
     },
     "web": {
       "output": "single",

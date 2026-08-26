@@ -661,7 +661,7 @@ def _demo_response(prompt: str) -> str:
                      "inscription, affectation aux campagnes).")
 
     if not lines:
-        lines.append("Je suis l'assistant agricole VIDEEKO VANILLA. Sans clé LLM configurée, "
+        lines.append("Je suis l'assistant agricole Vintsy. Sans clé LLM configurée, "
                      "je peux vous orienter vers les modules : Producteurs, Parcelles GPS, "
                      "Productions, Inspections, Intrants, Livraisons, Campagnes et l'Historique.")
         lines.append("Posez une question sur les inspections, le rendement, les régions, "
