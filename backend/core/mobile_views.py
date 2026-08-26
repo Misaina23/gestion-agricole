@@ -309,6 +309,12 @@ def create_or_update_producer(data, request, *, require_location=True):
         'registered_by': request.user,
     }
 
+    full_name = data.get('nomPrenom') or data.get('full_name') or ''
+    if full_name:
+        parts = full_name.strip().split(' ', 1)
+        defaults['last_name'] = parts[0] if parts[0] else defaults['last_name']
+        defaults['first_name'] = (parts[1] if len(parts) > 1 else '') or defaults['first_name']
+
     if existing:
         for key, value in defaults.items():
             setattr(existing, key, value)

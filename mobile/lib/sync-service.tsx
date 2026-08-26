@@ -131,6 +131,10 @@ export const syncPendingRecord = async (record: { id?: number; type: string; dat
     throw new Error('Pas de connexion internet');
   }
 
+  if (!token || token === 'null' || token === 'undefined') {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
+
   await request(endpoint, {
     method: 'POST',
     headers: {
@@ -273,7 +277,19 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
   const records = getPendingRecords();
   let token = await AsyncStorage.getItem('user_token');
 
-  if (!token || records.length === 0) {
+  if (!token || token === 'null' || token === 'undefined' || records.length === 0) {
+    onSync?.(0, 0);
+    return;
+  }
+
+  if (token.split('.').length !== 3) {
+    const refreshed = await refreshAuthToken();
+    if (refreshed) {
+      token = (await AsyncStorage.getItem('user_token')) || token;
+    }
+  }
+
+  if (!token || token === 'null' || token === 'undefined') {
     onSync?.(0, 0);
     return;
   }
@@ -294,7 +310,7 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
       });
       successCount++;
     } catch (error: any) {
-      const isAuthError = /401|non authent|token/i.test(error?.message || '');
+      const isAuthError = /401|non authent|token|session expirée/i.test(error?.message || '');
       if (isAuthError && !tokenRefreshed) {
         tokenRefreshed = true;
         const ok = await refreshAuthToken();
