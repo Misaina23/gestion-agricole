@@ -610,7 +610,7 @@ export function ParcelsPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog key={`edit-${selectedParcel?.id || 'none'}`} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">

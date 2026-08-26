@@ -137,12 +137,13 @@ export default function DashboardScreen({ navigation }: any) {
         await clearSynced();
       }
       setSyncedCount(prev => prev + successCount);
-      setPendingCount(prev => Math.max(prev - successCount, 0));
+      const remaining = getPendingRecords().length;
+      setPendingCount(remaining);
       if (successCount > 0 && failCount === 0) {
         alert('Synchronisation réussie', `${successCount} enregistrement(s) synchronisé(s)`, 'success');
       } else if (successCount > 0 && failCount > 0) {
         alert('Synchronisation partielle', `${successCount} succès, ${failCount} échecs`, 'warning');
-      } else {
+      } else if (failCount > 0) {
         alert('Échec de synchronisation', `${failCount} enregistrement(s) ont échoué`, 'error');
       }
     } catch (error: any) {

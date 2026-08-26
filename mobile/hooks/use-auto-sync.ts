@@ -38,7 +38,7 @@ export function useAutoSync() {
       const records = getPendingRecords();
       setPendingCount(records.length);
       
-      await autoSync((success, failed) => {
+      const remaining = await autoSync((success, failed) => {
         if (success > 0) {
           setSyncStatus('success');
         } else if (failed > 0 && records.length > 0) {
@@ -47,6 +47,7 @@ export function useAutoSync() {
           setSyncStatus('idle');
         }
       });
+      setPendingCount(remaining);
     } catch {
       setSyncStatus('error');
     }

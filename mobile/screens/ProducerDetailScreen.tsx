@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '../lib/db';
 
 type Harvest = { period: string; crop_slot: string; estimated_yield?: number | null; actual_harvest?: number | null; actual_yield?: number | null; delivered_quantity?: number | null };
@@ -10,13 +11,30 @@ type Parcel = { id: number; code: string; area: number; main_crop?: string | nul
 
 const label: Record<string, string> = { organic: 'Biologique', conversion: 'En conversion', conventional: 'Conventionnelle' };
 
-export default function ProducerDetailScreen({ route }: any) {
+export default function ProducerDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const producer = route.params.producer;
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleDelete} disabled={deleting}>
+          <Ionicons name="trash-outline" size={22} color={theme.error} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, deleting]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadParcels();
+    }, [producer.id])
+  );
 
   const loadParcels = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -28,6 +46,37 @@ export default function ProducerDetailScreen({ route }: any) {
       setParcels(await response.json());
     } catch { setError(true); }
     finally { setLoading(false); setRefreshing(false); }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Supprimer',
+      'Le producteur et ses données liées seront définitivement supprimés.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const token = await AsyncStorage.getItem('user_token');
+              const response = await fetch(`${API_URL.replace(/\/$/, '')}/api/producers/${producer.id}/`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!response.ok) throw new Error('Suppression impossible');
+              Alert.alert('Succès', 'Producteur supprimé');
+              navigation.goBack();
+            } catch {
+              Alert.alert('Erreur', 'Impossible de supprimer le producteur');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   useEffect(() => { loadParcels(); }, [producer.id]);

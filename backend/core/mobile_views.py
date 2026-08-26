@@ -359,7 +359,7 @@ def sync_collecte(request):
             or request.data.get('code_unique_parcelle')
         )
         if not parcel_code:
-            raise ValueError('codeUniqueParcelle requis')
+            parcel_code = Parcel.generate_next_code(producer)
         notes = build_notes(
             request.data,
             ['nomSite', 'culture', 'interculture', 'estimationRecolte', 'rendement', 'quantiteLivree', 'dateIntegration', 'gpsMenage']
@@ -408,7 +408,7 @@ def sync_parcel(request):
 
         code = normalize_code(request.data.get('code') or request.data.get('codeUniqueParcelle') or request.data.get('code_unique_parcelle'))
         if not code:
-            raise ValueError('code parcelle requis')
+            code = Parcel.generate_next_code(producer)
 
         lat, lng = parse_coordinates(request.data.get('gps') or request.data.get('coordinates'))
         if lat is None:

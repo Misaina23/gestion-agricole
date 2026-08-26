@@ -218,13 +218,24 @@ export function ProducersPage() {
     if (!selectedProducer) return
     setIsSubmitting(true)
     try {
+      refresh(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            results: currentData.results.filter((p) => p.id !== selectedProducer.id),
+            count: currentData.count - 1,
+          }
+        },
+        false
+      )
       await producersApi.delete(selectedProducer.id)
       successAlert("Suppression réussie", "Le producteur a été supprimé.")
       setSelectedProducer(null)
-      invalidateProducers()
       refresh()
     } catch {
       errorAlert("Erreur", "Impossible de supprimer le producteur.")
+      refresh()
     } finally {
       setIsSubmitting(false)
     }

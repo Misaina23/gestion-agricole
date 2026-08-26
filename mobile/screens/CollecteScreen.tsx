@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
@@ -7,17 +7,35 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { addPendingRecord, initDB } from '../lib/db';
+import { addPendingRecord, initDB, getPendingRecords } from '../lib/db';
 import ThemedDatePicker from '../components/ThemedDatePicker';
 
 interface FormData {
-  nomSite: string; nomPrenom: string; codeProducteur: string; telephone: string;
-  dateIntegration: string; superficie: string; chiffreAffaires: string;
-  dateDerniereInspection: string; codeUniqueParcelle: string; culture: string;
-  interculture: string; nombreArbres: string; gpsParcelle1: string;
-  gpsParcelle2: string; gpsParcelle3: string; gpsMenage: string;
-  estimationRecolte: string; rendement: string; quantiteLivree: string; nomCI: string;
-  commune: string; district: string; region: string;
+  nomSite: string;
+  nomPrenom: string;
+  codeProducteur: string;
+  telephone: string;
+  dateIntegration: string;
+  superficie: string;
+  chiffreAffaires: string;
+  dateDerniereInspection: string;
+  codeUniqueParcelle: string;
+  culture: string;
+  interculture: string;
+  nombreArbres: string;
+  gpsParcelle1: string;
+  gpsParcelle2: string;
+  gpsParcelle3: string;
+  gpsMenage: string;
+  estimationRecolte: string;
+  rendement: string;
+  quantiteLivree: string;
+  nomCI: string;
+  commune: string;
+  district: string;
+  region: string;
+  dateCollecte: string;
+  agentCI: string;
 }
 
 const initialForm: FormData = {
@@ -27,14 +45,27 @@ const initialForm: FormData = {
   interculture: '', nombreArbres: '', gpsParcelle1: '', gpsParcelle2: '',
   gpsParcelle3: '', gpsMenage: '', estimationRecolte: '', rendement: '',
   quantiteLivree: '', nomCI: '', commune: '', district: '', region: '',
+  dateCollecte: '', agentCI: '',
 };
+
+type Tab = 'producer' | 'parcel' | 'financial';
+
+const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'producer', label: 'Producteur', icon: 'person-outline' },
+  { key: 'parcel', label: 'Parcelle', icon: 'map-outline' },
+  { key: 'financial', label: 'Finances', icon: 'cash-outline' },
+];
 
 export default function CollecteScreen({ navigation, route }: any) {
   const { theme } = useTheme();
   const { alert } = useNotification();
   const [form, setForm] = useState<FormData>(initialForm);
+  const [tab, setTab] = useState<Tab>('producer');
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [producerSearch, setProducerSearch] = useState('');
+  const [producerResults, setProducerResults] = useState<any[]>([]);
+  const [searchingProducer, setSearchingProducer] = useState(false);
 
   useEffect(() => {
     initDB();
@@ -92,32 +123,125 @@ export default function CollecteScreen({ navigation, route }: any) {
     }
   };
 
-  const validateForm = (): string | null => {
+  const searchProducers = useCallback(async (query: string) => {
+    setProducerSearch(query);
+    if (!query.trim()) {
+      setProducerResults([]);
+      return;
+    }
+    setSearchingProducer(true);
+    try {
+      const token = await AsyncStorage.getItem('user_token');
+      const url = `${API_URL.replace(/\/$/, '')}/api/producers/?search=${encodeURIComponent(query)}&page_size=20`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProducerResults(data.results || []);
+      } else {
+        setProducerResults([]);
+      }
+    } catch {
+      setProducerResults([]);
+    } finally {
+      setSearchingProducer(false);
+    }
+  }, []);
+
+  const validateProducer = (): string | null => {
     if (!form.nomSite?.trim()) return 'Le nom du site est obligatoire';
     if (!form.nomPrenom?.trim()) return 'Le nom et prénom sont obligatoires';
+    if (!form.dateCollecte?.trim()) return 'La date de collecte est obligatoire';
+    if (!form.agentCI?.trim()) return 'Le nom de l\'agent / CI est obligatoires';
     return null;
   };
 
-  const handleSubmit = async () => {
-    const error = validateForm();
+  const validateParcel = (): string | null => {
+    if (!form.codeUniqueParcelle?.trim()) return 'Le code unique de la parcelle est obligatoire';
+    if (!form.dateCollecte?.trim()) return 'La date de collecte est obligatoire';
+    if (!form.agentCI?.trim()) return 'Le nom de l\'agent / CI est obligatoires';
+    return null;
+  };
+
+  const validateFinancial = (): string | null => {
+    if (!form.dateCollecte?.trim()) return 'La date de collecte est obligatoire';
+    if (!form.agentCI?.trim()) return 'Le nom de l\'agent / CI est obligatoires';
+    return null;
+  };
+
+  const saveProducer = async () => {
+    const error = validateProducer();
     if (error) {
       Alert.alert('Validation', error);
       return;
     }
-    if (!form.gpsParcelle1) {
-      Alert.alert('GPS requis', 'Captez au moins le GPS Parcelle 1 avant d\'enregistrer');
+    setSaving(true);
+    try {
+      const record = {
+        ...form,
+        createdAt: new Date().toISOString(),
+        type: 'collecte_producer',
+      };
+      addPendingRecord({
+        type: 'collecte_producer',
+        data: JSON.stringify(record),
+        createdAt: new Date().toISOString(),
+      });
+      alert('Succès', 'Producteur enregistré localement', 'success');
+      setForm(prev => ({ ...prev, nomSite: '', nomPrenom: '', telephone: '', region: '', district: '', commune: '' }));
+    } catch {
+      alert('Erreur', "Échec de l'enregistrement", 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveParcel = async () => {
+    const error = validateParcel();
+    if (error) {
+      Alert.alert('Validation', error);
       return;
     }
     setSaving(true);
     try {
-      const record = { ...form, createdAt: new Date().toISOString(), type: 'collecte' };
+      const record = {
+        ...form,
+        createdAt: new Date().toISOString(),
+        type: 'collecte_parcel',
+      };
       addPendingRecord({
-        type: 'collecte',
+        type: 'collecte_parcel',
         data: JSON.stringify(record),
         createdAt: new Date().toISOString(),
       });
-      alert('Succès', 'Données enregistrées localement', 'success');
-      setForm(initialForm);
+      alert('Succès', 'Parcelle enregistrée localement', 'success');
+      setForm(prev => ({ ...prev, codeUniqueParcelle: '', superficie: '', culture: '', interculture: '', nombreArbres: '', gpsParcelle1: '', gpsParcelle2: '', gpsParcelle3: '', gpsMenage: '' }));
+    } catch {
+      alert('Erreur', "Échec de l'enregistrement", 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveFinancial = async () => {
+    const error = validateFinancial();
+    if (error) {
+      Alert.alert('Validation', error);
+      return;
+    }
+    setSaving(true);
+    try {
+      const record = {
+        ...form,
+        createdAt: new Date().toISOString(),
+        type: 'collecte_financial',
+      };
+      addPendingRecord({
+        type: 'collecte_financial',
+        data: JSON.stringify(record),
+        createdAt: new Date().toISOString(),
+      });
+      alert('Succès', 'Données financières enregistrées localement', 'success');
+      setForm(prev => ({ ...prev, chiffreAffaires: '', estimationRecolte: '', rendement: '', quantiteLivree: '' }));
     } catch {
       alert('Erreur', "Échec de l'enregistrement", 'error');
     } finally {
@@ -153,7 +277,7 @@ export default function CollecteScreen({ navigation, route }: any) {
           placeholderTextColor={theme.textMuted}
         />
         <TouchableOpacity
-          style={[styles.gpsButton, { backgroundColor: theme.success }]}
+          style={[styles.gpsButton, { backgroundColor: theme.navy }]}
           onPress={() => captureGPS(field)}
           disabled={loadingGPS}
         >
@@ -167,11 +291,141 @@ export default function CollecteScreen({ navigation, route }: any) {
     </View>
   );
 
-  const SectionHeader = ({ icon, title }: { icon: string; title: string }) => (
-    <View style={[styles.sectionHeader, { borderBottomColor: theme.primaryMuted }]}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>{icon} {title}</Text>
+  const renderProducerTab = () => (
+    <View style={styles.tabContent}>
+      <View style={[styles.sectionHeader, { borderBottomColor: theme.primaryMuted }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>👤 Informations Producteur</Text>
+      </View>
+      {renderInput('Nom du site *', 'nomSite')}
+      {renderInput('Nom et prénom *', 'nomPrenom')}
+      {renderInput('Téléphone', 'telephone', { keyboard: 'phone-pad' })}
+      {renderInput('Code producteur', 'codeProducteur')}
+      <ThemedDatePicker
+        label="Date de collecte *"
+        value={form.dateCollecte}
+        onDateChange={(v) => updateField('dateCollecte', v)}
+      />
+      {renderInput('Nom de l\'agent / CI *', 'agentCI')}
+      {renderInput('Commune', 'commune')}
+      {renderInput('District', 'district')}
+      {renderInput('Région', 'region')}
+      <TouchableOpacity
+        style={[styles.submitButton, { backgroundColor: theme.navy }]}
+        onPress={saveProducer}
+        disabled={saving}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+        <Text style={styles.submitText}>{saving ? 'Enregistrement...' : 'Enregistrer Producteur'}</Text>
+      </TouchableOpacity>
     </View>
   );
+
+  const renderParcelTab = () => (
+    <View style={styles.tabContent}>
+      <View style={[styles.sectionHeader, { borderBottomColor: theme.primaryMuted }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>🌱 Collecte Parcelle</Text>
+      </View>
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Rechercher un producteur existant</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={producerSearch}
+          onChangeText={searchProducers}
+          placeholder="Code ou nom du producteur..."
+          placeholderTextColor={theme.textMuted}
+        />
+        {searchingProducer && <ActivityIndicator color={theme.primary} style={{ marginTop: 8 }} />}
+        {producerResults.length > 0 && (
+          <View style={[styles.searchResults, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {producerResults.slice(0, 5).map((producer) => (
+              <TouchableOpacity
+                key={producer.id}
+                style={styles.searchResultItem}
+                onPress={() => {
+                  updateField('codeProducteur', producer.code);
+                  updateField('nomPrenom', producer.name || '');
+                  setProducerSearch('');
+                  setProducerResults([]);
+                }}
+              >
+                <Text style={[styles.searchResultCode, { color: theme.primary }]}>{producer.code}</Text>
+                <Text style={[styles.searchResultName, { color: theme.text }]}>{producer.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+      {renderInput('Code unique parcelle *', 'codeUniqueParcelle')}
+      {renderInput('Superficie (ha)', 'superficie', { keyboard: 'numeric' })}
+      {renderInput('Culture', 'culture')}
+      {renderInput('Interculture', 'interculture')}
+      {renderInput("Nombre d'arbres", 'nombreArbres', { keyboard: 'numeric' })}
+      <ThemedDatePicker
+        label="Date de collecte *"
+        value={form.dateCollecte}
+        onDateChange={(v) => updateField('dateCollecte', v)}
+      />
+      {renderInput('Nom de l\'agent / CI *', 'agentCI')}
+      <View style={[styles.sectionHeader, { borderBottomColor: theme.primaryMuted }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>📍 Coordonnées GPS</Text>
+      </View>
+      {renderGPSButton('GPS Parcelle 1 *', 'gpsParcelle1')}
+      {renderGPSButton('GPS Parcelle 2', 'gpsParcelle2')}
+      {renderGPSButton('GPS Parcelle 3', 'gpsParcelle3')}
+      {renderGPSButton('GPS Ménage', 'gpsMenage')}
+      {renderInput('Commune', 'commune')}
+      {renderInput('District', 'district')}
+      {renderInput('Région', 'region')}
+      <TouchableOpacity
+        style={[styles.submitButton, { backgroundColor: theme.navy }]}
+        onPress={saveParcel}
+        disabled={saving}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+        <Text style={styles.submitText}>{saving ? 'Enregistrement...' : 'Enregistrer Parcelle'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderFinancialTab = () => (
+    <View style={styles.tabContent}>
+      <View style={[styles.sectionHeader, { borderBottomColor: theme.primaryMuted }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>📊 Données Financières & Récolte</Text>
+      </View>
+      <ThemedDatePicker
+        label="Date de collecte *"
+        value={form.dateCollecte}
+        onDateChange={(v) => updateField('dateCollecte', v)}
+      />
+      {renderInput('Nom de l\'agent / CI *', 'agentCI')}
+      {renderInput("Chiffre d'affaires", 'chiffreAffaires', { keyboard: 'numeric' })}
+      {renderInput('Estimation récolte', 'estimationRecolte')}
+      {renderInput('Rendement', 'rendement')}
+      {renderInput('Quantité livrée', 'quantiteLivree', { keyboard: 'numeric' })}
+      <TouchableOpacity
+        style={[styles.submitButton, { backgroundColor: theme.navy }]}
+        onPress={saveFinancial}
+        disabled={saving}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+        <Text style={styles.submitText}>{saving ? 'Enregistrement...' : 'Enregistrer Finances'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderTabContent = () => {
+    switch (tab) {
+      case 'producer':
+        return renderProducerTab();
+      case 'parcel':
+        return renderParcelTab();
+      case 'financial':
+        return renderFinancialTab();
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -184,57 +438,28 @@ export default function CollecteScreen({ navigation, route }: any) {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <SectionHeader icon="👤" title="Informations Producteur" />
-        {renderInput('Nom du site *', 'nomSite')}
-        {renderInput('Nom et prénom *', 'nomPrenom')}
-        {renderInput('Téléphone', 'telephone', { keyboard: 'phone-pad' })}
-        <ThemedDatePicker
-          label="Date d'intégration"
-          value={form.dateIntegration}
-          onDateChange={(v) => updateField('dateIntegration', v)}
-        />
-
-        <SectionHeader icon="🌱" title="Parcelle" />
-        {renderInput('Superficie (ha)', 'superficie', { keyboard: 'numeric' })}
-        {renderInput('Culture', 'culture')}
-        {renderInput('Interculture', 'interculture')}
-        {renderInput("Nombre d'arbres", 'nombreArbres', { keyboard: 'numeric' })}
-
-        <SectionHeader icon="📍" title="Coordonnées GPS" />
-        {renderGPSButton('GPS Parcelle 1 *', 'gpsParcelle1')}
-        {renderGPSButton('GPS Parcelle 2', 'gpsParcelle2')}
-        {renderGPSButton('GPS Parcelle 3', 'gpsParcelle3')}
-        {renderGPSButton('GPS Ménage', 'gpsMenage')}
-        {renderInput('Commune', 'commune')}
-        {renderInput('District', 'district')}
-        {renderInput('Région', 'region')}
-
-        <SectionHeader icon="📊" title="Données Financières & Récolte" />
-        {renderInput("Chiffre d'affaires", 'chiffreAffaires', { keyboard: 'numeric' })}
-        {renderInput('Estimation récolte', 'estimationRecolte')}
-        {renderInput('Rendement', 'rendement')}
-        {renderInput('Quantité livrée', 'quantiteLivree', { keyboard: 'numeric' })}
-
-        <SectionHeader icon="🔍" title="Inspection" />
-        <ThemedDatePicker
-          label="Date dernière inspection"
-          value={form.dateDerniereInspection}
-          onDateChange={(v) => updateField('dateDerniereInspection', v)}
-        />
-        {renderInput('Nom du CI', 'nomCI')}
-
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: theme.success }]}
-          onPress={handleSubmit}
-          disabled={saving}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
-          <Text style={styles.submitText}>
-            {saving ? 'Enregistrement...' : 'Enregistrer la collecte'}
-          </Text>
-        </TouchableOpacity>
-
+        <View style={[styles.tabBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {TAB_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[
+                styles.tabItem,
+                tab === item.key && { borderBottomColor: theme.navy, borderBottomWidth: 2 },
+              ]}
+              onPress={() => setTab(item.key)}
+            >
+              <Ionicons
+                name={item.icon as any}
+                size={20}
+                color={tab === item.key ? theme.navy : theme.textMuted}
+              />
+              <Text style={[styles.tabLabel, { color: tab === item.key ? theme.navy : theme.textMuted }]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {renderTabContent()}
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -243,7 +468,22 @@ export default function CollecteScreen({ navigation, route }: any) {
 
 const styles = StyleSheet.create({
   content: { padding: 16 },
-  sectionHeader: { marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottomWidth: 1.5 },
+  tabBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    marginBottom: 16,
+  },
+  tabItem: {
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  tabLabel: { fontSize: 12, fontWeight: '600' },
+  tabContent: { flex: 1 },
+  sectionHeader: { marginTop: 8, marginBottom: 14, paddingBottom: 8, borderBottomWidth: 1.5 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   fieldGroup: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
@@ -258,4 +498,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
   submitText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  searchResults: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  searchResultCode: { fontSize: 13, fontWeight: '700' },
+  searchResultName: { fontSize: 14, marginTop: 2 },
 });

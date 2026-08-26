@@ -1,7 +1,9 @@
 """
 Parcel Models
 """
-from django.db import models
+import re
+from django.db import models, transaction
+from django.db.models import Sum, Max
 from core.models import TimeStampedModel, VanillaVariety
 
 
@@ -223,6 +225,43 @@ class Parcel(TimeStampedModel):
         if self.vanilla_plants and self.vanilla_plants > 0:
             return round((self.productive_plants / self.vanilla_plants) * 100, 1)
         return 0
+
+    @classmethod
+    @transaction.atomic
+    def generate_next_code(cls, producer=None):
+        """Generate the next available parcel code.
+
+        If ``producer`` is provided, the code is scoped per producer
+        (``P1``, ``P2``, ...). Otherwise a global sequence is used.
+        """
+        prefix = 'P'
+        qs = cls.objects.select_for_update()
+        if producer:
+            qs = qs.filter(producer=producer)
+            prefix = f'P{producer.id or ""}'
+        max_seq = 0
+        for parcel in qs.all():
+            match = re.match(r'^P(\d+)$', parcel.code or '')
+            if match:
+                seq = int(match.group(1))
+                if seq > max_seq:
+                    max_seq = seq
+        if producer:
+            return f'P{producer.id or 0}-{max_seq + 1}'
+        return f'{prefix}{max_seq + 1}'
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_next_code(self.producer)
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            try:
+                return super().save(*args, **kwargs)
+            except Exception as exc:
+                if attempt < max_attempts - 1 and 'code' in str(exc).lower():
+                    self.code = self.generate_next_code(self.producer)
+                    continue
+                raise
 
 
 class ParcelRegisterHarvest(TimeStampedModel):

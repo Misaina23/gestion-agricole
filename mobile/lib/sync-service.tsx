@@ -355,7 +355,9 @@ export const autoSync = async (onSync?: (success: number, failed: number) => voi
     await clearSynced();
   }
 
+  const remaining = getPendingRecords().length;
   onSync?.(successCount, failCount);
+  return remaining;
 };
 
 export const setupAutoSyncListener = (callback?: (count: number) => void) => {
