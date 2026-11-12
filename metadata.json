@@ -1,0 +1,8 @@
+{
+  "name": "Vintsy - Gestion Agricole",
+  "description": "Plateforme de gestion agricole pour la filière vanille : producteurs, parcelles, productions, inspections et livraisons.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
